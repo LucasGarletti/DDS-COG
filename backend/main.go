@@ -17,7 +17,7 @@ func main() {
 		log.Fatal("Error running database migrations: ", err)
 	}
 
-	router := routes.SetupRouter()
+	router := routes.SetupRouter(config.DB)
 
 	port := os.Getenv("PORT")
 	if port == "" {
