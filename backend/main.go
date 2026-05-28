@@ -1,5 +1,30 @@
 package main
-func main(){
 
+import (
+	"log"
+	"os"
+
+	"backend/config"
+	"backend/domain"
+	"backend/routes"
+)
+
+func main() {
+	config.LoadEnv()
+	config.ConnectDatabase()
+
+	if err := config.DB.AutoMigrate(&domain.User{}); err != nil {
+		log.Fatal("Error running database migrations: ", err)
+	}
+
+	router := routes.SetupRouter()
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	if err := router.Run(":" + port); err != nil {
+		log.Fatal("Error starting server: ", err)
+	}
 }
-
