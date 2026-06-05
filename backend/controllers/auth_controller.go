@@ -135,3 +135,18 @@ func (controller *AuthController) Login(c *gin.Context) {
 		},
 	})
 }
+
+func (controller *AuthController) Me(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	name, _ := c.Get("name")
+	email, _ := c.Get("email")
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"id":    userID,
+			"name":  name,
+			"email": email,
+		},
+	})
+}

@@ -43,3 +43,38 @@ func GenerateJWT(userID uint, name string, email string) (string, error) {
 
 	return token.SignedString([]byte(secret))
 }
+
+func ValidateJWT(tokenString string) (*JWTClaims, error) {
+	secret := strings.TrimSpace(os.Getenv("JWT_SECRET"))
+	if secret == "" {
+		return nil, errors.New("JWT_SECRET is required")
+	}
+
+	tokenString = strings.TrimSpace(tokenString)
+	if tokenString == "" {
+		return nil, errors.New("token is required")
+	}
+
+	claims := &JWTClaims{}
+	token, err := jwt.ParseWithClaims(
+		tokenString,
+		claims,
+		func(token *jwt.Token) (interface{}, error) {
+			if token.Method != jwt.SigningMethodHS256 {
+				return nil, errors.New("unexpected signing method")
+			}
+
+			return []byte(secret), nil
+		},
+		jwt.WithExpirationRequired(),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if !token.Valid {
+		return nil, errors.New("invalid token")
+	}
+
+	return claims, nil
+}

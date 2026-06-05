@@ -5,6 +5,7 @@ import (
 
 	"backend/controllers"
 	"backend/dao"
+	"backend/middlewares"
 	"backend/services"
 
 	"github.com/gin-gonic/gin"
@@ -26,6 +27,7 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 	{
 		authRoutes.POST("/register", authController.Register)
 		authRoutes.POST("/login", authController.Login)
+		authRoutes.GET("/me", middlewares.AuthMiddleware(), authController.Me)
 	}
 
 	return router
