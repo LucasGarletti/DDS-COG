@@ -27,8 +27,18 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 	eventService := services.NewEventService(eventDAO)
 	eventController := controllers.NewEventController(eventService)
 
+	ticketDAO := dao.NewTicketDAO(db)
+	ticketService := services.NewTicketService(ticketDAO)
+	ticketController := controllers.NewTicketController(ticketService)
+
 	router.GET("/eventos", eventController.GetAll)
 	router.GET("/eventos/:id", eventController.GetByID)
+
+	ticketRoutes := router.Group("/entradas")
+	ticketRoutes.Use(middlewares.AuthMiddleware())
+	{
+		ticketRoutes.POST("/comprar/:eventoId", ticketController.Purchase)
+	}
 
 	authRoutes := router.Group("/auth")
 	{

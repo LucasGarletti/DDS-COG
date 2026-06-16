@@ -1,0 +1,49 @@
+package dao
+
+import (
+	"backend/domain"
+
+	"gorm.io/gorm"
+)
+
+type TicketDAO struct {
+	db *gorm.DB
+}
+
+func NewTicketDAO(db *gorm.DB) *TicketDAO {
+	return &TicketDAO{db: db}
+}
+
+func (dao *TicketDAO) GetEventByID(id uint) (*domain.Event, error) {
+	var event domain.Event
+
+	if err := dao.db.First(&event, id).Error; err != nil {
+		return nil, err
+	}
+
+	return &event, nil
+}
+
+func (dao *TicketDAO) CountTickets() (int64, error) {
+	var count int64
+
+	if err := dao.db.Model(&domain.Ticket{}).Count(&count).Error; err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func (dao *TicketDAO) CreatePurchase(ticket *domain.Ticket, event *domain.Event) error {
+	return dao.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Save(event).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Create(ticket).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
