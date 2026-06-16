@@ -23,6 +23,13 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 	authService := services.NewAuthService(userDAO)
 	authController := controllers.NewAuthController(authService)
 
+	eventDAO := dao.NewEventDAO(db)
+	eventService := services.NewEventService(eventDAO)
+	eventController := controllers.NewEventController(eventService)
+
+	router.GET("/eventos", eventController.GetAll)
+	router.GET("/eventos/:id", eventController.GetByID)
+
 	authRoutes := router.Group("/auth")
 	{
 		authRoutes.POST("/register", authController.Register)
