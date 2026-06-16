@@ -12,6 +12,7 @@ type Event struct {
 	AvailableCapacity int       `json:"available_capacity" gorm:"not null"`
 	Price             float64   `json:"price" gorm:"type:decimal(10,2);not null"`
 	ImageURL          string    `json:"image_url" gorm:"type:varchar(255)"`
+	Tickets           []Ticket  `json:"tickets,omitempty" gorm:"foreignKey:EventID"`
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
 }

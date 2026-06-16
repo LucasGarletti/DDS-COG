@@ -13,7 +13,7 @@ func main() {
 	config.LoadEnv()
 	config.ConnectDatabase()
 
-	if err := config.DB.AutoMigrate(&domain.User{}, &domain.Event{}); err != nil {
+	if err := config.DB.AutoMigrate(&domain.User{}, &domain.Event{}, &domain.Ticket{}); err != nil {
 		log.Fatal("Error running database migrations: ", err)
 	}
 
