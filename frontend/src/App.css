@@ -59,6 +59,59 @@
   padding: 34px 0 56px;
 }
 
+.home-page {
+  display: grid;
+  gap: 34px;
+}
+
+.home-hero {
+  display: grid;
+  align-items: end;
+  min-height: 420px;
+  padding: 44px;
+  color: #fff;
+  background:
+    linear-gradient(100deg, rgba(10, 31, 68, 0.95), rgba(0, 111, 255, 0.45)),
+    url('./assets/cosquirock.png') center / cover;
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.home-hero div {
+  display: grid;
+  gap: 16px;
+  max-width: 620px;
+}
+
+.home-hero p,
+.home-hero span {
+  margin: 0;
+}
+
+.home-hero p {
+  color: #b8d6ff;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.home-hero h1 {
+  margin: 0;
+  color: #fff;
+}
+
+.home-hero span {
+  color: #e5efff;
+  font-size: 18px;
+  max-width: 520px;
+}
+
+.featured-section {
+  display: grid;
+  gap: 18px;
+}
+
 .page-hero {
   display: flex;
   align-items: flex-end;
@@ -94,6 +147,13 @@
 .page-hero h1,
 .section-heading h1 {
   margin: 0;
+}
+
+.section-heading h2 {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 34px;
+  line-height: 1.1;
 }
 
 .event-list,
@@ -405,6 +465,21 @@ button {
   width: min(320px, 100%);
 }
 
+.app-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  width: min(1120px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 24px 0 32px;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+}
+
+.app-footer strong {
+  color: var(--text-strong);
+}
+
 @media (max-width: 760px) {
   .app-nav,
   .nav-links,
@@ -434,6 +509,11 @@ button {
     background: linear-gradient(110deg, rgba(10, 31, 68, 0.96), rgba(0, 111, 255, 0.84));
   }
 
+  .home-hero {
+    min-height: 340px;
+    padding: 28px;
+  }
+
   .detail-layout {
     grid-template-columns: 1fr;
   }
@@ -449,5 +529,9 @@ button {
   .secondary-button,
   .transfer-form input {
     width: 100%;
+  }
+
+  .app-footer {
+    flex-direction: column;
   }
 }

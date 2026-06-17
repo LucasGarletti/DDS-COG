@@ -9,6 +9,7 @@ import {
 } from 'react-router-dom'
 import EventDetailPage from '../pages/EventDetailPage'
 import EventsPage from '../pages/EventsPage'
+import HomePage from '../pages/HomePage'
 import LoginPage from '../pages/LoginPage'
 import MyTicketsPage from '../pages/MyTicketsPage'
 
@@ -41,7 +42,7 @@ function AppContent() {
   return (
     <div className="app-shell">
       <nav className="app-nav">
-        <Link className="brand" to="/eventos">
+        <Link className="brand" to="/">
           TickGo
         </Link>
         <div className="nav-links">
@@ -64,7 +65,7 @@ function AppContent() {
       </nav>
 
       <Routes>
-        <Route path="/" element={<Navigate to="/eventos" replace />} />
+        <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
         <Route path="/eventos" element={<EventsPage />} />
         <Route path="/eventos/:id" element={<EventDetailPage />} />
@@ -77,6 +78,11 @@ function AppContent() {
           }
         />
       </Routes>
+
+      <footer className="app-footer">
+        <strong>TickGo</strong>
+        <span>Sistema de gestion y compra de entradas</span>
+      </footer>
     </div>
   )
 }
