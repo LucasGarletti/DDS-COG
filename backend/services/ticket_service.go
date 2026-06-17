@@ -9,7 +9,11 @@ import (
 	"backend/domain"
 )
 
-var ErrEventSoldOut = errors.New("event capacity exhausted")
+var (
+	ErrEventSoldOut           = errors.New("event capacity exhausted")
+	ErrTicketNotOwned         = errors.New("ticket does not belong to authenticated user")
+	ErrTicketAlreadyCancelled = errors.New("ticket already cancelled")
+)
 
 type TicketService struct {
 	ticketDAO *dao.TicketDAO
@@ -59,6 +63,32 @@ func (service *TicketService) PurchaseTicket(input PurchaseTicketInput) (*domain
 
 func (service *TicketService) ListTicketsByUser(userID uint) ([]domain.Ticket, error) {
 	return service.ticketDAO.GetByUserID(userID)
+}
+
+func (service *TicketService) CancelTicket(ticketID uint, userID uint) (*domain.Ticket, error) {
+	ticket, err := service.ticketDAO.GetByID(ticketID)
+	if err != nil {
+		return nil, err
+	}
+
+	if ticket.UserID != userID {
+		return nil, ErrTicketNotOwned
+	}
+
+	if ticket.Status == domain.TicketStatusCancelled {
+		return nil, ErrTicketAlreadyCancelled
+	}
+
+	now := time.Now()
+	ticket.Status = domain.TicketStatusCancelled
+	ticket.CancellationDate = &now
+	ticket.Event.AvailableCapacity++
+
+	if err := service.ticketDAO.CancelTicket(ticket, &ticket.Event); err != nil {
+		return nil, err
+	}
+
+	return ticket, nil
 }
 
 func (service *TicketService) generateTicketCode(now time.Time) (string, error) {

@@ -48,6 +48,16 @@ func (dao *TicketDAO) GetByUserID(userID uint) ([]domain.Ticket, error) {
 	return tickets, nil
 }
 
+func (dao *TicketDAO) GetByID(id uint) (*domain.Ticket, error) {
+	var ticket domain.Ticket
+
+	if err := dao.db.Preload("Event").First(&ticket, id).Error; err != nil {
+		return nil, err
+	}
+
+	return &ticket, nil
+}
+
 func (dao *TicketDAO) CreatePurchase(ticket *domain.Ticket, event *domain.Event) error {
 	return dao.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Save(event).Error; err != nil {
@@ -55,6 +65,20 @@ func (dao *TicketDAO) CreatePurchase(ticket *domain.Ticket, event *domain.Event)
 		}
 
 		if err := tx.Create(ticket).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
+func (dao *TicketDAO) CancelTicket(ticket *domain.Ticket, event *domain.Event) error {
+	return dao.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Save(event).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Save(ticket).Error; err != nil {
 			return err
 		}
 
