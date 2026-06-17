@@ -39,6 +39,7 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 	ticketRoutes.Use(middlewares.AuthMiddleware())
 	{
 		ticketRoutes.POST("/comprar/:eventoId", ticketController.Purchase)
+		ticketRoutes.PATCH("/:id/cancelar", ticketController.Cancel)
 	}
 
 	authRoutes := router.Group("/auth")
