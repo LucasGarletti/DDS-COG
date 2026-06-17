@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"backend/services"
 
@@ -13,6 +14,10 @@ import (
 
 type TicketController struct {
 	ticketService *services.TicketService
+}
+
+type transferTicketRequest struct {
+	RecipientEmail string `json:"email_destinatario"`
 }
 
 func NewTicketController(ticketService *services.TicketService) *TicketController {
@@ -82,7 +87,7 @@ func (controller *TicketController) Cancel(c *gin.Context) {
 		return
 	}
 
-	ticket, err := controller.ticketService.CancelTicket(uint(ticketID), authenticatedUserID)
+	ticket, err := controller.ticketService.CancelTicket(authenticatedUserID, uint(ticketID))
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{
@@ -118,6 +123,104 @@ func (controller *TicketController) Cancel(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "ticket cancelled successfully",
+		"data":    ticket,
+	})
+}
+
+func (controller *TicketController) Transfer(c *gin.Context) {
+	userID, ok := c.Get("user_id")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"error":   "user not authenticated",
+		})
+		return
+	}
+
+	authenticatedUserID, ok := userID.(uint)
+	if !ok || authenticatedUserID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"error":   "user not authenticated",
+		})
+		return
+	}
+
+	ticketID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil || ticketID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "invalid ticket id",
+		})
+		return
+	}
+
+	var request transferTicketRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "invalid request body",
+		})
+		return
+	}
+
+	recipientEmail := strings.TrimSpace(request.RecipientEmail)
+	if recipientEmail == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "recipient email is required",
+		})
+		return
+	}
+
+	ticket, err := controller.ticketService.TransferTicket(services.TransferTicketInput{
+		UserID:         authenticatedUserID,
+		TicketID:       uint(ticketID),
+		RecipientEmail: recipientEmail,
+	})
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{
+				"success": false,
+				"error":   "ticket or recipient not found",
+			})
+			return
+		}
+
+		if errors.Is(err, services.ErrTicketNotOwned) {
+			c.JSON(http.StatusForbidden, gin.H{
+				"success": false,
+				"error":   "ticket does not belong to authenticated user",
+			})
+			return
+		}
+
+		if errors.Is(err, services.ErrTicketAlreadyCancelled) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "ticket is cancelled",
+			})
+			return
+		}
+
+		if errors.Is(err, services.ErrInvalidRecipient) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "invalid recipient",
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "could not transfer ticket",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "ticket transferred successfully",
 		"data":    ticket,
 	})
 }

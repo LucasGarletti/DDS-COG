@@ -13,10 +13,12 @@ var (
 	ErrEventSoldOut           = errors.New("event capacity exhausted")
 	ErrTicketNotOwned         = errors.New("ticket does not belong to authenticated user")
 	ErrTicketAlreadyCancelled = errors.New("ticket already cancelled")
+	ErrInvalidRecipient       = errors.New("invalid recipient")
 )
 
 type TicketService struct {
 	ticketDAO *dao.TicketDAO
+	userDAO   *dao.UserDAO
 }
 
 type PurchaseTicketInput struct {
@@ -24,8 +26,17 @@ type PurchaseTicketInput struct {
 	EventID uint
 }
 
-func NewTicketService(ticketDAO *dao.TicketDAO) *TicketService {
-	return &TicketService{ticketDAO: ticketDAO}
+type TransferTicketInput struct {
+	UserID         uint
+	TicketID       uint
+	RecipientEmail string
+}
+
+func NewTicketService(ticketDAO *dao.TicketDAO, userDAO *dao.UserDAO) *TicketService {
+	return &TicketService{
+		ticketDAO: ticketDAO,
+		userDAO:   userDAO,
+	}
 }
 
 func (service *TicketService) PurchaseTicket(input PurchaseTicketInput) (*domain.Ticket, error) {
@@ -65,8 +76,8 @@ func (service *TicketService) ListTicketsByUser(userID uint) ([]domain.Ticket, e
 	return service.ticketDAO.GetByUserID(userID)
 }
 
-func (service *TicketService) CancelTicket(ticketID uint, userID uint) (*domain.Ticket, error) {
-	ticket, err := service.ticketDAO.GetByID(ticketID)
+func (service *TicketService) CancelTicket(userID uint, ticketID uint) (*domain.Ticket, error) {
+	ticket, err := service.ticketDAO.GetByIDWithEvent(ticketID)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +95,39 @@ func (service *TicketService) CancelTicket(ticketID uint, userID uint) (*domain.
 	ticket.CancellationDate = &now
 	ticket.Event.AvailableCapacity++
 
-	if err := service.ticketDAO.CancelTicket(ticket, &ticket.Event); err != nil {
+	if err := service.ticketDAO.SaveTicketAndEvent(ticket, &ticket.Event); err != nil {
+		return nil, err
+	}
+
+	return ticket, nil
+}
+
+func (service *TicketService) TransferTicket(input TransferTicketInput) (*domain.Ticket, error) {
+	ticket, err := service.ticketDAO.GetByIDWithEvent(input.TicketID)
+	if err != nil {
+		return nil, err
+	}
+
+	if ticket.UserID != input.UserID {
+		return nil, ErrTicketNotOwned
+	}
+
+	if ticket.Status != domain.TicketStatusActive {
+		return nil, ErrTicketAlreadyCancelled
+	}
+
+	recipient, err := service.userDAO.FindByEmail(input.RecipientEmail)
+	if err != nil {
+		return nil, err
+	}
+
+	if recipient.ID == input.UserID {
+		return nil, ErrInvalidRecipient
+	}
+
+	ticket.UserID = recipient.ID
+
+	if err := service.ticketDAO.SaveTicket(ticket); err != nil {
 		return nil, err
 	}
 

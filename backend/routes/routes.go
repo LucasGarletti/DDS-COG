@@ -28,7 +28,7 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 	eventController := controllers.NewEventController(eventService)
 
 	ticketDAO := dao.NewTicketDAO(db)
-	ticketService := services.NewTicketService(ticketDAO)
+	ticketService := services.NewTicketService(ticketDAO, userDAO)
 	ticketController := controllers.NewTicketController(ticketService)
 
 	router.GET("/eventos", eventController.GetAll)
@@ -40,6 +40,7 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 	{
 		ticketRoutes.POST("/comprar/:eventoId", ticketController.Purchase)
 		ticketRoutes.PATCH("/:id/cancelar", ticketController.Cancel)
+		ticketRoutes.PATCH("/:id/transferir", ticketController.Transfer)
 	}
 
 	authRoutes := router.Group("/auth")
