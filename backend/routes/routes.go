@@ -33,6 +33,7 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 
 	router.GET("/eventos", eventController.GetAll)
 	router.GET("/eventos/:id", eventController.GetByID)
+	router.GET("/mis-entradas", middlewares.AuthMiddleware(), ticketController.GetMyTickets)
 
 	ticketRoutes := router.Group("/entradas")
 	ticketRoutes.Use(middlewares.AuthMiddleware())

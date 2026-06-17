@@ -57,6 +57,10 @@ func (service *TicketService) PurchaseTicket(input PurchaseTicketInput) (*domain
 	return ticket, nil
 }
 
+func (service *TicketService) ListTicketsByUser(userID uint) ([]domain.Ticket, error) {
+	return service.ticketDAO.GetByUserID(userID)
+}
+
 func (service *TicketService) generateTicketCode(now time.Time) (string, error) {
 	count, err := service.ticketDAO.CountTickets()
 	if err != nil {

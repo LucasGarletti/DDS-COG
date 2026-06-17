@@ -34,6 +34,20 @@ func (dao *TicketDAO) CountTickets() (int64, error) {
 	return count, nil
 }
 
+func (dao *TicketDAO) GetByUserID(userID uint) ([]domain.Ticket, error) {
+	var tickets []domain.Ticket
+
+	if err := dao.db.
+		Preload("Event").
+		Where("user_id = ?", userID).
+		Order("purchase_date desc").
+		Find(&tickets).Error; err != nil {
+		return nil, err
+	}
+
+	return tickets, nil
+}
+
 func (dao *TicketDAO) CreatePurchase(ticket *domain.Ticket, event *domain.Event) error {
 	return dao.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Save(event).Error; err != nil {

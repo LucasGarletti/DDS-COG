@@ -19,6 +19,41 @@ func NewTicketController(ticketService *services.TicketService) *TicketControlle
 	return &TicketController{ticketService: ticketService}
 }
 
+func (controller *TicketController) GetMyTickets(c *gin.Context) {
+	userID, ok := c.Get("user_id")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"error":   "user not authenticated",
+		})
+		return
+	}
+
+	authenticatedUserID, ok := userID.(uint)
+	if !ok || authenticatedUserID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"error":   "user not authenticated",
+		})
+		return
+	}
+
+	tickets, err := controller.ticketService.ListTicketsByUser(authenticatedUserID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "could not get tickets",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "tickets retrieved successfully",
+		"data":    tickets,
+	})
+}
+
 func (controller *TicketController) Purchase(c *gin.Context) {
 	userID, ok := c.Get("user_id")
 	if !ok {
