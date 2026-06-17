@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"backend/dao"
 	"backend/domain"
 )
 
@@ -17,8 +16,18 @@ var (
 )
 
 type TicketService struct {
-	ticketDAO *dao.TicketDAO
-	userDAO   *dao.UserDAO
+	ticketDAO TicketRepository
+	userDAO   UserRepository
+}
+
+type TicketRepository interface {
+	GetEventByID(id uint) (*domain.Event, error)
+	CountTickets() (int64, error)
+	GetByUserID(userID uint) ([]domain.Ticket, error)
+	GetByIDWithEvent(id uint) (*domain.Ticket, error)
+	CreatePurchase(ticket *domain.Ticket, event *domain.Event) error
+	SaveTicketAndEvent(ticket *domain.Ticket, event *domain.Event) error
+	SaveTicket(ticket *domain.Ticket) error
 }
 
 type PurchaseTicketInput struct {
@@ -32,7 +41,7 @@ type TransferTicketInput struct {
 	RecipientEmail string
 }
 
-func NewTicketService(ticketDAO *dao.TicketDAO, userDAO *dao.UserDAO) *TicketService {
+func NewTicketService(ticketDAO TicketRepository, userDAO UserRepository) *TicketService {
 	return &TicketService{
 		ticketDAO: ticketDAO,
 		userDAO:   userDAO,

@@ -3,7 +3,6 @@ package services
 import (
 	"errors"
 
-	"backend/dao"
 	"backend/domain"
 	"backend/utils"
 
@@ -30,11 +29,16 @@ type LoginOutput struct {
 	User  *domain.User
 }
 
-type AuthService struct {
-	userDAO *dao.UserDAO
+type UserRepository interface {
+	FindByEmail(email string) (*domain.User, error)
+	Create(user *domain.User) error
 }
 
-func NewAuthService(userDAO *dao.UserDAO) *AuthService {
+type AuthService struct {
+	userDAO UserRepository
+}
+
+func NewAuthService(userDAO UserRepository) *AuthService {
 	return &AuthService{userDAO: userDAO}
 }
 
