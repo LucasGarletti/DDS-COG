@@ -1,15 +1,19 @@
 package services
 
 import (
-	"backend/dao"
 	"backend/domain"
 )
 
 type EventService struct {
-	eventDAO *dao.EventDAO
+	eventDAO EventRepository
 }
 
-func NewEventService(eventDAO *dao.EventDAO) *EventService {
+type EventRepository interface {
+	GetAll() ([]domain.Event, error)
+	GetByID(id uint) (*domain.Event, error)
+}
+
+func NewEventService(eventDAO EventRepository) *EventService {
 	return &EventService{eventDAO: eventDAO}
 }
 

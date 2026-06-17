@@ -8,8 +8,10 @@ import (
 )
 
 type fakeTicketRepository struct {
-	event  *domain.Event
-	ticket *domain.Ticket
+	event   *domain.Event
+	ticket  *domain.Ticket
+	tickets []domain.Ticket
+	count   int64
 }
 
 func (repo fakeTicketRepository) GetEventByID(id uint) (*domain.Event, error) {
@@ -17,11 +19,11 @@ func (repo fakeTicketRepository) GetEventByID(id uint) (*domain.Event, error) {
 }
 
 func (repo fakeTicketRepository) CountTickets() (int64, error) {
-	return 0, nil
+	return repo.count, nil
 }
 
 func (repo fakeTicketRepository) GetByUserID(userID uint) ([]domain.Ticket, error) {
-	return nil, nil
+	return repo.tickets, nil
 }
 
 func (repo fakeTicketRepository) GetByIDWithEvent(id uint) (*domain.Ticket, error) {
@@ -109,5 +111,48 @@ func TestTransferToSameUserReturnsError(t *testing.T) {
 	})
 	if !errors.Is(err, ErrInvalidRecipient) {
 		t.Fatalf("expected ErrInvalidRecipient, got %v", err)
+	}
+}
+
+func TestListTicketsByUserReturnsList(t *testing.T) {
+	expectedTickets := []domain.Ticket{
+		{ID: 1, UserID: 1, Status: domain.TicketStatusActive},
+		{ID: 2, UserID: 1, Status: domain.TicketStatusCancelled},
+	}
+	service := NewTicketService(fakeTicketRepository{tickets: expectedTickets}, fakeUserRepository{})
+
+	tickets, err := service.ListTicketsByUser(1)
+	if err != nil {
+		t.Fatalf("ListTicketsByUser returned error: %v", err)
+	}
+
+	if len(tickets) != len(expectedTickets) {
+		t.Fatalf("expected %d tickets, got %d", len(expectedTickets), len(tickets))
+	}
+}
+
+func TestPurchaseTicketSuccessGeneratesCode(t *testing.T) {
+	service := NewTicketService(fakeTicketRepository{
+		event: &domain.Event{
+			ID:                1,
+			AvailableCapacity: 10,
+		},
+		count: 4,
+	}, fakeUserRepository{})
+
+	ticket, err := service.PurchaseTicket(PurchaseTicketInput{
+		UserID:  1,
+		EventID: 1,
+	})
+	if err != nil {
+		t.Fatalf("PurchaseTicket returned error: %v", err)
+	}
+
+	if ticket.Code == "" {
+		t.Fatal("expected generated ticket code")
+	}
+
+	if ticket.Status != domain.TicketStatusActive {
+		t.Fatalf("expected active ticket, got %s", ticket.Status)
 	}
 }
