@@ -17,7 +17,37 @@ function formatDate(date) {
   }).format(new Date(date))
 }
 
-function MyTicketsPage() {
+function getUserIDFromToken(token) {
+  if (!token) {
+    return null
+  }
+
+  try {
+    const payload = token.split('.')[1]
+    const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/')
+    const decodedPayload = JSON.parse(atob(normalizedPayload))
+
+    return decodedPayload.id
+  } catch {
+    return null
+  }
+}
+
+function filterTicketsByUser(tickets, userID) {
+  if (!userID) {
+    return tickets
+  }
+
+  return tickets.filter((ticket) => {
+    if (ticket.user_id === undefined || ticket.user_id === null) {
+      return true
+    }
+
+    return Number(ticket.user_id) === Number(userID)
+  })
+}
+
+function MyTicketsPage({ authToken }) {
   const [tickets, setTickets] = useState([])
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
@@ -26,9 +56,20 @@ function MyTicketsPage() {
   const [transferEmails, setTransferEmails] = useState({})
 
   async function loadTickets() {
+    const currentToken = localStorage.getItem('token')
+    const currentUserID = getUserIDFromToken(currentToken)
+
+    setTickets([])
+    setError('')
+    setLoading(true)
+
     try {
       const result = await getMyTickets()
-      setTickets(result.data || [])
+      if (currentToken !== localStorage.getItem('token')) {
+        return
+      }
+
+      setTickets(filterTicketsByUser(result.data || [], currentUserID))
     } catch {
       setError('No se pudieron cargar tus entradas')
     } finally {
@@ -37,8 +78,12 @@ function MyTicketsPage() {
   }
 
   useEffect(() => {
+    setTickets([])
+    setTransferEmails({})
+    setMessage('')
+    setError('')
     loadTickets()
-  }, [])
+  }, [authToken])
 
   async function handleCancel(ticketId) {
     setError('')

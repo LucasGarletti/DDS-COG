@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import fallbackEventImage from '../assets/hero.png'
 import { getEventById } from '../services/eventService'
 import { purchaseTicket } from '../services/ticketService'
@@ -31,6 +31,7 @@ function formatPrice(price) {
 
 function EventDetailPage() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [event, setEvent] = useState(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
@@ -56,6 +57,12 @@ function EventDetailPage() {
   async function handlePurchase() {
     setPurchaseMessage('')
     setPurchaseError('')
+
+    if (!localStorage.getItem('token')) {
+      navigate('/login')
+      return
+    }
+
     setPurchasing(true)
 
     try {

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { login } from '../services/authService'
 
-function LoginPage() {
+function LoginPage({ onLogin }) {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -17,6 +17,7 @@ function LoginPage() {
     try {
       const result = await login(email, password)
       localStorage.setItem('token', result.data.token)
+      onLogin?.(result.data.token)
       navigate('/eventos')
     } catch {
       setError('No se pudo iniciar sesion')
