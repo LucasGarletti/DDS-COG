@@ -34,6 +34,9 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 	ticketController := controllers.NewTicketController(ticketService)
 	adminEventService := services.NewAdminEventService(eventDAO, ticketDAO)
 	adminEventController := controllers.NewAdminEventController(adminEventService)
+	adminReportDAO := dao.NewAdminReportDAO(db)
+	adminReportService := services.NewAdminReportService(adminReportDAO)
+	adminReportController := controllers.NewAdminReportController(adminReportService)
 
 	router.GET("/eventos", eventController.GetAll)
 	router.GET("/eventos/:id", eventController.GetByID)
@@ -62,6 +65,8 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 		adminRoutes.PATCH("/eventos/:id", adminEventController.Update)
 		adminRoutes.DELETE("/eventos/:id", adminEventController.Cancel)
 		adminRoutes.GET("/eventos/:id/reporte", adminEventController.Report)
+		adminRoutes.GET("/reportes/resumen", adminReportController.Summary)
+		adminRoutes.GET("/reportes/eventos", adminReportController.EventReports)
 	}
 
 	return router

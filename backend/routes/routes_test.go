@@ -124,6 +124,56 @@ func TestAdminRouteAllowsAdminReport(t *testing.T) {
 	}
 }
 
+func TestAdminReportRoutesExist(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+	}{
+		{name: "summary", path: "/admin/reportes/resumen"},
+		{name: "event reports", path: "/admin/reportes/eventos"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			response := serveAdminRoute(t, domain.UserRoleAdmin, http.MethodGet, tt.path)
+
+			if response.Code != http.StatusOK {
+				t.Fatalf("expected status 200, got %d", response.Code)
+			}
+		})
+	}
+}
+
+func TestAdminReportRouteWithoutTokenReturnsUnauthorized(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	router := newAdminAuthTestRouter()
+	request := httptest.NewRequest(http.MethodGet, "/admin/reportes/resumen", nil)
+	response := httptest.NewRecorder()
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusUnauthorized {
+		t.Fatalf("expected status 401, got %d", response.Code)
+	}
+}
+
+func TestAdminReportRouteRejectsClient(t *testing.T) {
+	response := serveAdminRoute(t, domain.UserRoleClient, http.MethodGet, "/admin/reportes/resumen")
+
+	if response.Code != http.StatusForbidden {
+		t.Fatalf("expected status 403, got %d", response.Code)
+	}
+}
+
+func TestAdminCanAccessReportController(t *testing.T) {
+	response := serveAdminRoute(t, domain.UserRoleAdmin, http.MethodGet, "/admin/reportes/resumen")
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", response.Code)
+	}
+}
+
 func newAdminAuthTestRouter() *gin.Engine {
 	router := gin.New()
 	adminRoutes := router.Group("/admin")
@@ -134,6 +184,8 @@ func newAdminAuthTestRouter() *gin.Engine {
 		adminRoutes.PATCH("/eventos/:id", func(c *gin.Context) { c.Status(http.StatusOK) })
 		adminRoutes.DELETE("/eventos/:id", func(c *gin.Context) { c.Status(http.StatusOK) })
 		adminRoutes.GET("/eventos/:id/reporte", func(c *gin.Context) { c.Status(http.StatusOK) })
+		adminRoutes.GET("/reportes/resumen", func(c *gin.Context) { c.Status(http.StatusOK) })
+		adminRoutes.GET("/reportes/eventos", func(c *gin.Context) { c.Status(http.StatusOK) })
 	}
 	return router
 }
