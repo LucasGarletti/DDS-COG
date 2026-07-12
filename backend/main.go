@@ -21,6 +21,10 @@ func main() {
 		log.Fatal("Error normalizing user roles: ", err)
 	}
 
+	if err := normalizeEventStatuses(); err != nil {
+		log.Fatal("Error normalizing event statuses: ", err)
+	}
+
 	router := routes.SetupRouter(config.DB)
 
 	port := os.Getenv("PORT")
@@ -37,4 +41,10 @@ func normalizeUserRoles() error {
 	return config.DB.Model(&domain.User{}).
 		Where("role IS NULL OR role = ? OR role NOT IN ?", "", []string{domain.UserRoleClient, domain.UserRoleAdmin}).
 		Update("role", domain.UserRoleClient).Error
+}
+
+func normalizeEventStatuses() error {
+	return config.DB.Model(&domain.Event{}).
+		Where("status IS NULL OR status = ? OR status NOT IN ?", "", []string{domain.EventStatusActive, domain.EventStatusCancelled}).
+		Update("status", domain.EventStatusActive).Error
 }

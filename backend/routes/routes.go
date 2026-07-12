@@ -5,6 +5,7 @@ import (
 
 	"backend/controllers"
 	"backend/dao"
+	"backend/domain"
 	"backend/middlewares"
 	"backend/services"
 
@@ -31,6 +32,8 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 	ticketDAO := dao.NewTicketDAO(db)
 	ticketService := services.NewTicketService(ticketDAO, userDAO)
 	ticketController := controllers.NewTicketController(ticketService)
+	adminEventService := services.NewAdminEventService(eventDAO, ticketDAO)
+	adminEventController := controllers.NewAdminEventController(adminEventService)
 
 	router.GET("/eventos", eventController.GetAll)
 	router.GET("/eventos/:id", eventController.GetByID)
@@ -51,6 +54,16 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 		authRoutes.GET("/me", middlewares.AuthMiddleware(), authController.Me)
 	}
 
+	adminRoutes := router.Group("/admin")
+	adminRoutes.Use(middlewares.AuthMiddleware())
+	adminRoutes.Use(middlewares.RequireRole(domain.UserRoleAdmin))
+	{
+		adminRoutes.POST("/eventos", adminEventController.Create)
+		adminRoutes.PATCH("/eventos/:id", adminEventController.Update)
+		adminRoutes.DELETE("/eventos/:id", adminEventController.Cancel)
+		adminRoutes.GET("/eventos/:id/reporte", adminEventController.Report)
+	}
+
 	return router
 }
 
@@ -67,7 +80,7 @@ func corsMiddleware() gin.HandlerFunc {
 			c.Header("Vary", "Origin")
 		}
 
-		c.Header("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS")
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type, Cache-Control, Pragma, Expires")
 
 		if c.Request.Method == http.MethodOptions {

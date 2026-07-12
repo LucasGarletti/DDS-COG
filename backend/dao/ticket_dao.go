@@ -89,3 +89,23 @@ func (dao *TicketDAO) SaveTicketAndEvent(ticket *domain.Ticket, event *domain.Ev
 func (dao *TicketDAO) SaveTicket(ticket *domain.Ticket) error {
 	return dao.db.Save(ticket).Error
 }
+
+func (dao *TicketDAO) CountTicketsByEvent(eventID uint) (int64, error) {
+	var count int64
+
+	if err := dao.db.Model(&domain.Ticket{}).Where("event_id = ?", eventID).Count(&count).Error; err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func (dao *TicketDAO) CountTicketsByEventAndStatus(eventID uint, status string) (int64, error) {
+	var count int64
+
+	if err := dao.db.Model(&domain.Ticket{}).Where("event_id = ? AND status = ?", eventID, status).Count(&count).Error; err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}

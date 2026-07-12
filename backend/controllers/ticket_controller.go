@@ -274,6 +274,14 @@ func (controller *TicketController) Purchase(c *gin.Context) {
 			return
 		}
 
+		if errors.Is(err, services.ErrEventCancelledPurchase) {
+			c.JSON(http.StatusConflict, gin.H{
+				"success": false,
+				"error":   "event is cancelled",
+			})
+			return
+		}
+
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
 			"error":   "could not purchase ticket",

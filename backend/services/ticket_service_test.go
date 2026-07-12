@@ -56,6 +56,20 @@ func TestPurchaseTicketWithSoldOutEventReturnsError(t *testing.T) {
 	}
 }
 
+func TestPurchaseTicketWithCancelledEventReturnsError(t *testing.T) {
+	service := NewTicketService(fakeTicketRepository{
+		event: &domain.Event{ID: 1, Status: domain.EventStatusCancelled, AvailableCapacity: 10},
+	}, fakeUserRepository{})
+
+	_, err := service.PurchaseTicket(PurchaseTicketInput{
+		UserID:  1,
+		EventID: 1,
+	})
+	if !errors.Is(err, ErrEventCancelledPurchase) {
+		t.Fatalf("expected ErrEventCancelledPurchase, got %v", err)
+	}
+}
+
 func TestCancelAlreadyCancelledTicketReturnsError(t *testing.T) {
 	service := NewTicketService(fakeTicketRepository{
 		ticket: &domain.Ticket{

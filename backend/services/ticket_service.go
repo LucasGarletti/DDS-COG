@@ -13,6 +13,7 @@ var (
 	ErrTicketNotOwned         = errors.New("ticket does not belong to authenticated user")
 	ErrTicketAlreadyCancelled = errors.New("ticket already cancelled")
 	ErrInvalidRecipient       = errors.New("invalid recipient")
+	ErrEventCancelledPurchase = errors.New("event is cancelled")
 )
 
 type TicketService struct {
@@ -52,6 +53,10 @@ func (service *TicketService) PurchaseTicket(input PurchaseTicketInput) (*domain
 	event, err := service.ticketDAO.GetEventByID(input.EventID)
 	if err != nil {
 		return nil, err
+	}
+
+	if event.Status == domain.EventStatusCancelled {
+		return nil, ErrEventCancelledPurchase
 	}
 
 	if event.AvailableCapacity <= 0 {
