@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"backend/domain"
 	"errors"
 	"os"
 	"strconv"
@@ -14,13 +15,18 @@ type JWTClaims struct {
 	ID    uint   `json:"id"`
 	Name  string `json:"name"`
 	Email string `json:"email"`
+	Role  string `json:"role"`
 	jwt.RegisteredClaims
 }
 
-func GenerateJWT(userID uint, name string, email string) (string, error) {
+func GenerateJWT(userID uint, name string, email string, role string) (string, error) {
 	secret := strings.TrimSpace(os.Getenv("JWT_SECRET"))
 	if secret == "" {
 		return "", errors.New("JWT_SECRET is required")
+	}
+
+	if !IsValidUserRole(role) {
+		return "", errors.New("invalid user role")
 	}
 
 	expiresInHours, err := strconv.Atoi(os.Getenv("JWT_EXPIRES"))
@@ -33,6 +39,7 @@ func GenerateJWT(userID uint, name string, email string) (string, error) {
 		ID:    userID,
 		Name:  name,
 		Email: email,
+		Role:  role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(time.Duration(expiresInHours) * time.Hour)),
@@ -76,5 +83,13 @@ func ValidateJWT(tokenString string) (*JWTClaims, error) {
 		return nil, errors.New("invalid token")
 	}
 
+	if !IsValidUserRole(claims.Role) {
+		return nil, errors.New("invalid user role")
+	}
+
 	return claims, nil
+}
+
+func IsValidUserRole(role string) bool {
+	return role == domain.UserRoleClient || role == domain.UserRoleAdmin
 }

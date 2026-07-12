@@ -58,6 +58,7 @@ func TestLoginWithInvalidCredentialsReturnsError(t *testing.T) {
 			Name:     "Test User",
 			Email:    "test@mail.com",
 			Password: string(hashedPassword),
+			Role:     domain.UserRoleClient,
 		},
 	})
 
@@ -105,6 +106,82 @@ func TestRegisterHashesPassword(t *testing.T) {
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte("plain-password")); err != nil {
 		t.Fatalf("expected hashed password to match original password: %v", err)
+	}
+}
+
+func TestRegisterCreatesClientUser(t *testing.T) {
+	repo := &fakeRegisterUserRepository{findErr: gorm.ErrRecordNotFound}
+	service := NewAuthService(repo)
+
+	user, err := service.Register(RegisterInput{
+		Name:     "Test User",
+		Email:    "test@mail.com",
+		Password: "plain-password",
+	})
+	if err != nil {
+		t.Fatalf("Register returned error: %v", err)
+	}
+
+	if user.Role != domain.UserRoleClient {
+		t.Fatalf("expected registered user role client, got %s", user.Role)
+	}
+
+	if repo.createdUser.Role != domain.UserRoleClient {
+		t.Fatalf("expected created user role client, got %s", repo.createdUser.Role)
+	}
+}
+
+func TestRegisterDoesNotAllowAdminRole(t *testing.T) {
+	repo := &fakeRegisterUserRepository{findErr: gorm.ErrRecordNotFound}
+	service := NewAuthService(repo)
+
+	user, err := service.Register(RegisterInput{
+		Name:     "Test User",
+		Email:    "test@mail.com",
+		Password: "plain-password",
+	})
+	if err != nil {
+		t.Fatalf("Register returned error: %v", err)
+	}
+
+	if user.Role == domain.UserRoleAdmin {
+		t.Fatal("expected public register not to create admin user")
+	}
+}
+
+func TestLoginWithValidCredentialsReturnsToken(t *testing.T) {
+	t.Setenv("JWT_SECRET", "test-secret")
+	t.Setenv("JWT_EXPIRES", "1")
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("correct-password"), bcrypt.DefaultCost)
+	if err != nil {
+		t.Fatalf("could not hash password: %v", err)
+	}
+
+	service := NewAuthService(fakeUserRepository{
+		user: &domain.User{
+			ID:       1,
+			Name:     "Test User",
+			Email:    "test@mail.com",
+			Password: string(hashedPassword),
+			Role:     domain.UserRoleClient,
+		},
+	})
+
+	login, err := service.Login(LoginInput{
+		Email:    "test@mail.com",
+		Password: "correct-password",
+	})
+	if err != nil {
+		t.Fatalf("Login returned error: %v", err)
+	}
+
+	if login.Token == "" {
+		t.Fatal("expected token")
+	}
+
+	if login.User.Role != domain.UserRoleClient {
+		t.Fatalf("expected user role client, got %s", login.User.Role)
 	}
 }
 

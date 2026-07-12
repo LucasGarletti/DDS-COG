@@ -17,6 +17,10 @@ func main() {
 		log.Fatal("Error running database migrations: ", err)
 	}
 
+	if err := normalizeUserRoles(); err != nil {
+		log.Fatal("Error normalizing user roles: ", err)
+	}
+
 	router := routes.SetupRouter(config.DB)
 
 	port := os.Getenv("PORT")
@@ -27,4 +31,10 @@ func main() {
 	if err := router.Run(":" + port); err != nil {
 		log.Fatal("Error starting server: ", err)
 	}
+}
+
+func normalizeUserRoles() error {
+	return config.DB.Model(&domain.User{}).
+		Where("role IS NULL OR role = ? OR role NOT IN ?", "", []string{domain.UserRoleClient, domain.UserRoleAdmin}).
+		Update("role", domain.UserRoleClient).Error
 }

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"backend/domain"
 	"errors"
 	"net/http"
 	"strings"
@@ -11,7 +12,12 @@ import (
 )
 
 type AuthController struct {
-	authService *services.AuthService
+	authService authService
+}
+
+type authService interface {
+	Register(input services.RegisterInput) (*domain.User, error)
+	Login(input services.LoginInput) (*services.LoginOutput, error)
 }
 
 type RegisterRequest struct {
@@ -25,7 +31,7 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
-func NewAuthController(authService *services.AuthService) *AuthController {
+func NewAuthController(authService authService) *AuthController {
 	return &AuthController{authService: authService}
 }
 
@@ -79,6 +85,7 @@ func (controller *AuthController) Register(c *gin.Context) {
 			"id":    user.ID,
 			"name":  user.Name,
 			"email": user.Email,
+			"role":  user.Role,
 		},
 	})
 }
@@ -132,6 +139,7 @@ func (controller *AuthController) Login(c *gin.Context) {
 			"id":    login.User.ID,
 			"name":  login.User.Name,
 			"email": login.User.Email,
+			"role":  login.User.Role,
 		},
 	})
 }
@@ -140,6 +148,7 @@ func (controller *AuthController) Me(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	name, _ := c.Get("name")
 	email, _ := c.Get("email")
+	role, _ := c.Get("role")
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -147,6 +156,7 @@ func (controller *AuthController) Me(c *gin.Context) {
 			"id":    userID,
 			"name":  name,
 			"email": email,
+			"role":  role,
 		},
 	})
 }

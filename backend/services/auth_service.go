@@ -60,6 +60,7 @@ func (service *AuthService) Register(input RegisterInput) (*domain.User, error) 
 		Name:     input.Name,
 		Email:    input.Email,
 		Password: string(hashedPassword),
+		Role:     domain.UserRoleClient,
 	}
 
 	if err := service.userDAO.Create(user); err != nil {
@@ -83,7 +84,7 @@ func (service *AuthService) Login(input LoginInput) (*LoginOutput, error) {
 		return nil, ErrInvalidCredentials
 	}
 
-	token, err := utils.GenerateJWT(user.ID, user.Name, user.Email)
+	token, err := utils.GenerateJWT(user.ID, user.Name, user.Email, user.Role)
 	if err != nil {
 		return nil, err
 	}
