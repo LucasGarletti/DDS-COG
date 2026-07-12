@@ -32,6 +32,7 @@ type createEventRequest struct {
 	Capacity    int     `json:"capacity"`
 	Price       float64 `json:"price"`
 	ImageURL    string  `json:"image_url"`
+	IsFestival  bool    `json:"is_festival"`
 }
 
 type updateEventRequest struct {
@@ -42,6 +43,7 @@ type updateEventRequest struct {
 	Capacity    *int     `json:"capacity"`
 	Price       *float64 `json:"price"`
 	ImageURL    *string  `json:"image_url"`
+	IsFestival  *bool    `json:"is_festival"`
 }
 
 func NewAdminEventController(adminEventService adminEventService) *AdminEventController {
@@ -75,6 +77,7 @@ func (controller *AdminEventController) Create(c *gin.Context) {
 		Capacity:    request.Capacity,
 		Price:       request.Price,
 		ImageURL:    request.ImageURL,
+		IsFestival:  request.IsFestival,
 	})
 	if err != nil {
 		controller.handleAdminEventError(c, err, "could not create event")
@@ -124,6 +127,7 @@ func (controller *AdminEventController) Update(c *gin.Context) {
 		Capacity:    request.Capacity,
 		Price:       request.Price,
 		ImageURL:    request.ImageURL,
+		IsFestival:  request.IsFestival,
 	}
 	if date != nil {
 		input.Date = date

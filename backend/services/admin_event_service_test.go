@@ -98,6 +98,46 @@ func TestAdminCreateEventValid(t *testing.T) {
 	}
 }
 
+func TestAdminCreateFestivalEventPersistsIsFestivalTrue(t *testing.T) {
+	repo := &fakeAdminEventRepository{}
+	service := newAdminEventTestService(repo, &fakeEventReportRepository{})
+	input := validCreateEventInput()
+	input.IsFestival = true
+
+	event, err := service.CreateEvent(input)
+	if err != nil {
+		t.Fatalf("CreateEvent returned error: %v", err)
+	}
+
+	if !event.IsFestival {
+		t.Fatal("expected created event to be festival")
+	}
+
+	if !repo.createdEvent.IsFestival {
+		t.Fatal("expected persisted event to be festival")
+	}
+}
+
+func TestAdminCreateNormalEventPersistsIsFestivalFalse(t *testing.T) {
+	repo := &fakeAdminEventRepository{}
+	service := newAdminEventTestService(repo, &fakeEventReportRepository{})
+	input := validCreateEventInput()
+	input.IsFestival = false
+
+	event, err := service.CreateEvent(input)
+	if err != nil {
+		t.Fatalf("CreateEvent returned error: %v", err)
+	}
+
+	if event.IsFestival {
+		t.Fatal("expected created event not to be festival")
+	}
+
+	if repo.createdEvent.IsFestival {
+		t.Fatal("expected persisted event not to be festival")
+	}
+}
+
 func TestAdminCreateEventInvalidInputs(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -150,6 +190,27 @@ func TestAdminUpdateEventValid(t *testing.T) {
 
 	if event.Title != title {
 		t.Fatalf("expected updated title, got %s", event.Title)
+	}
+}
+
+func TestAdminUpdateEventPersistsIsFestival(t *testing.T) {
+	isFestival := true
+	repo := &fakeAdminEventRepository{
+		event: &domain.Event{ID: 1, Capacity: 100, AvailableCapacity: 100, Status: domain.EventStatusActive, IsFestival: false},
+	}
+	service := newAdminEventTestService(repo, &fakeEventReportRepository{})
+
+	event, err := service.UpdateEvent(UpdateEventInput{ID: 1, IsFestival: &isFestival})
+	if err != nil {
+		t.Fatalf("UpdateEvent returned error: %v", err)
+	}
+
+	if !event.IsFestival {
+		t.Fatal("expected event to be updated as festival")
+	}
+
+	if !repo.savedEvent.IsFestival {
+		t.Fatal("expected saved event to be festival")
 	}
 }
 

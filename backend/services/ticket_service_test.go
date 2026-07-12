@@ -8,10 +8,12 @@ import (
 )
 
 type fakeTicketRepository struct {
-	event   *domain.Event
-	ticket  *domain.Ticket
-	tickets []domain.Ticket
-	count   int64
+	event                   *domain.Event
+	ticket                  *domain.Ticket
+	tickets                 []domain.Ticket
+	count                   int64
+	deletedItineraryUserID  uint
+	deletedItineraryEventID uint
 }
 
 func (repo fakeTicketRepository) GetEventByID(id uint) (*domain.Event, error) {
@@ -39,6 +41,10 @@ func (repo fakeTicketRepository) SaveTicketAndEvent(ticket *domain.Ticket, event
 }
 
 func (repo fakeTicketRepository) SaveTicket(ticket *domain.Ticket) error {
+	return nil
+}
+
+func (repo fakeTicketRepository) DeleteUserItineraryByUserAndEvent(userID uint, eventID uint) error {
 	return nil
 }
 
@@ -125,6 +131,57 @@ func TestTransferToSameUserReturnsError(t *testing.T) {
 	})
 	if !errors.Is(err, ErrInvalidRecipient) {
 		t.Fatalf("expected ErrInvalidRecipient, got %v", err)
+	}
+}
+
+type trackingTicketRepository struct {
+	fakeTicketRepository
+	deletedUserID  uint
+	deletedEventID uint
+	savedTicket    *domain.Ticket
+}
+
+func (repo *trackingTicketRepository) DeleteUserItineraryByUserAndEvent(userID uint, eventID uint) error {
+	repo.deletedUserID = userID
+	repo.deletedEventID = eventID
+	return nil
+}
+
+func (repo *trackingTicketRepository) SaveTicket(ticket *domain.Ticket) error {
+	repo.savedTicket = ticket
+	return nil
+}
+
+func TestTransferTicketDeletesOriginalUserItinerary(t *testing.T) {
+	repo := &trackingTicketRepository{
+		fakeTicketRepository: fakeTicketRepository{
+			ticket: &domain.Ticket{
+				ID:      1,
+				UserID:  1,
+				EventID: 7,
+				Status:  domain.TicketStatusActive,
+			},
+		},
+	}
+	service := NewTicketService(repo, fakeUserRepository{
+		user: &domain.User{ID: 2, Email: "other@mail.com"},
+	})
+
+	ticket, err := service.TransferTicket(TransferTicketInput{
+		UserID:         1,
+		TicketID:       1,
+		RecipientEmail: "other@mail.com",
+	})
+	if err != nil {
+		t.Fatalf("TransferTicket returned error: %v", err)
+	}
+
+	if repo.deletedUserID != 1 || repo.deletedEventID != 7 {
+		t.Fatalf("expected deleted itinerary for user 1 event 7, got user %d event %d", repo.deletedUserID, repo.deletedEventID)
+	}
+
+	if ticket.UserID != 2 {
+		t.Fatalf("expected transferred ticket user 2, got %d", ticket.UserID)
 	}
 }
 

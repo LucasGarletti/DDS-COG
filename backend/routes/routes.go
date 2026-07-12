@@ -37,10 +37,26 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 	adminReportDAO := dao.NewAdminReportDAO(db)
 	adminReportService := services.NewAdminReportService(adminReportDAO)
 	adminReportController := controllers.NewAdminReportController(adminReportService)
+	festivalScheduleDAO := dao.NewFestivalScheduleDAO(db)
+	festivalScheduleService := services.NewFestivalScheduleService(eventDAO, festivalScheduleDAO)
+	festivalScheduleController := controllers.NewFestivalScheduleController(festivalScheduleService)
+	userItineraryDAO := dao.NewUserItineraryDAO(db)
+	userItineraryService := services.NewUserItineraryService(eventDAO, festivalScheduleDAO, userItineraryDAO)
+	userItineraryController := controllers.NewUserItineraryController(userItineraryService)
 
 	router.GET("/eventos", eventController.GetAll)
 	router.GET("/eventos/:id", eventController.GetByID)
+	router.GET("/eventos/:id/grilla", festivalScheduleController.List)
 	router.GET("/mis-entradas", middlewares.AuthMiddleware(), ticketController.GetMyTickets)
+
+	itineraryRoutes := router.Group("/mis-itinerarios")
+	itineraryRoutes.Use(middlewares.AuthMiddleware())
+	{
+		itineraryRoutes.GET("/:eventoId", userItineraryController.Get)
+		itineraryRoutes.POST("/:eventoId/shows", userItineraryController.AddShow)
+		itineraryRoutes.POST("/:eventoId/actividades", userItineraryController.AddPersonalActivity)
+		itineraryRoutes.DELETE("/:eventoId/items/:itemId", userItineraryController.DeleteItem)
+	}
 
 	ticketRoutes := router.Group("/entradas")
 	ticketRoutes.Use(middlewares.AuthMiddleware())
@@ -67,6 +83,9 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 		adminRoutes.GET("/eventos/:id/reporte", adminEventController.Report)
 		adminRoutes.GET("/reportes/resumen", adminReportController.Summary)
 		adminRoutes.GET("/reportes/eventos", adminReportController.EventReports)
+		adminRoutes.POST("/eventos/:id/grilla", festivalScheduleController.Create)
+		adminRoutes.GET("/eventos/:id/grilla", festivalScheduleController.List)
+		adminRoutes.DELETE("/grilla/:id", festivalScheduleController.Delete)
 	}
 
 	return router

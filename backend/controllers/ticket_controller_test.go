@@ -44,6 +44,10 @@ func (repo fakeTicketRepository) SaveTicket(ticket *domain.Ticket) error {
 	return nil
 }
 
+func (repo fakeTicketRepository) DeleteUserItineraryByUserAndEvent(userID uint, eventID uint) error {
+	return nil
+}
+
 type fakeUserRepository struct{}
 
 func (repo fakeUserRepository) FindByEmail(email string) (*domain.User, error) {

@@ -37,6 +37,30 @@ func (service fakeAdminEventService) GetEventReport(id uint) (*services.EventRep
 	return service.report, service.err
 }
 
+type trackingAdminEventService struct {
+	createInput services.CreateEventInput
+	updateInput services.UpdateEventInput
+	event       *domain.Event
+}
+
+func (service *trackingAdminEventService) CreateEvent(input services.CreateEventInput) (*domain.Event, error) {
+	service.createInput = input
+	return service.event, nil
+}
+
+func (service *trackingAdminEventService) UpdateEvent(input services.UpdateEventInput) (*domain.Event, error) {
+	service.updateInput = input
+	return service.event, nil
+}
+
+func (service *trackingAdminEventService) CancelEvent(id uint) (*domain.Event, error) {
+	return service.event, nil
+}
+
+func (service *trackingAdminEventService) GetEventReport(id uint) (*services.EventReport, error) {
+	return nil, nil
+}
+
 func validAdminEventJSON() string {
 	return `{"title":"Evento","description":"Descripcion","date":"2026-12-10T20:00:00-03:00","location":"Cordoba","capacity":1000,"price":25000,"image_url":"https://example.com/image.jpg"}`
 }
@@ -58,6 +82,30 @@ func TestAdminCreateEventReturnsCreated(t *testing.T) {
 
 	if response.Code != http.StatusCreated {
 		t.Fatalf("expected status 201, got %d", response.Code)
+	}
+}
+
+func TestAdminCreateEventPassesIsFestival(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	service := &trackingAdminEventService{event: &domain.Event{ID: 1, IsFestival: true}}
+	controller := NewAdminEventController(service)
+	router := gin.New()
+	router.POST("/admin/eventos", controller.Create)
+
+	body := `{"title":"Evento","description":"Descripcion","date":"2026-12-10T20:00:00-03:00","location":"Cordoba","capacity":1000,"price":25000,"image_url":"https://example.com/image.jpg","is_festival":true}`
+	request := httptest.NewRequest(http.MethodPost, "/admin/eventos", strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusCreated {
+		t.Fatalf("expected status 201, got %d", response.Code)
+	}
+
+	if !service.createInput.IsFestival {
+		t.Fatal("expected is_festival true to be passed to service")
 	}
 }
 
@@ -168,6 +216,29 @@ func TestAdminUpdateEventReturnsOK(t *testing.T) {
 
 	if response.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d", response.Code)
+	}
+}
+
+func TestAdminUpdateEventPassesIsFestival(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	service := &trackingAdminEventService{event: &domain.Event{ID: 1, IsFestival: true}}
+	controller := NewAdminEventController(service)
+	router := gin.New()
+	router.PATCH("/admin/eventos/:id", controller.Update)
+
+	request := httptest.NewRequest(http.MethodPatch, "/admin/eventos/1", strings.NewReader(`{"is_festival":true}`))
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", response.Code)
+	}
+
+	if service.updateInput.IsFestival == nil || !*service.updateInput.IsFestival {
+		t.Fatal("expected is_festival true pointer to be passed to service")
 	}
 }
 

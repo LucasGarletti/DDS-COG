@@ -109,3 +109,24 @@ func (dao *TicketDAO) CountTicketsByEventAndStatus(eventID uint, status string) 
 
 	return count, nil
 }
+
+func (dao *TicketDAO) DeleteUserItineraryByUserAndEvent(userID uint, eventID uint) error {
+	return dao.db.Transaction(func(tx *gorm.DB) error {
+		var itineraryIDs []uint
+		if err := tx.Model(&domain.UserItinerary{}).
+			Where("user_id = ? AND event_id = ?", userID, eventID).
+			Pluck("id", &itineraryIDs).Error; err != nil {
+			return err
+		}
+
+		if len(itineraryIDs) == 0 {
+			return nil
+		}
+
+		if err := tx.Where("user_itinerary_id IN ?", itineraryIDs).Delete(&domain.ItineraryItem{}).Error; err != nil {
+			return err
+		}
+
+		return tx.Where("id IN ?", itineraryIDs).Delete(&domain.UserItinerary{}).Error
+	})
+}

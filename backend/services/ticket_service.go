@@ -29,6 +29,7 @@ type TicketRepository interface {
 	CreatePurchase(ticket *domain.Ticket, event *domain.Event) error
 	SaveTicketAndEvent(ticket *domain.Ticket, event *domain.Event) error
 	SaveTicket(ticket *domain.Ticket) error
+	DeleteUserItineraryByUserAndEvent(userID uint, eventID uint) error
 }
 
 type PurchaseTicketInput struct {
@@ -140,6 +141,10 @@ func (service *TicketService) TransferTicket(input TransferTicketInput) (*domain
 	}
 
 	ticket.UserID = recipient.ID
+
+	if err := service.ticketDAO.DeleteUserItineraryByUserAndEvent(input.UserID, ticket.EventID); err != nil {
+		return nil, err
+	}
 
 	if err := service.ticketDAO.SaveTicket(ticket); err != nil {
 		return nil, err

@@ -40,6 +40,7 @@ type CreateEventInput struct {
 	Capacity    int
 	Price       float64
 	ImageURL    string
+	IsFestival  bool
 }
 
 type UpdateEventInput struct {
@@ -51,6 +52,7 @@ type UpdateEventInput struct {
 	Capacity    *int
 	Price       *float64
 	ImageURL    *string
+	IsFestival  *bool
 }
 
 type EventReport struct {
@@ -92,6 +94,7 @@ func (service *AdminEventService) CreateEvent(input CreateEventInput) (*domain.E
 		AvailableCapacity: input.Capacity,
 		Price:             input.Price,
 		ImageURL:          input.ImageURL,
+		IsFestival:        input.IsFestival,
 		Status:            domain.EventStatusActive,
 	}
 
@@ -174,6 +177,10 @@ func (service *AdminEventService) UpdateEvent(input UpdateEventInput) (*domain.E
 
 		event.Capacity = *input.Capacity
 		event.AvailableCapacity = *input.Capacity - ticketsIssued
+	}
+
+	if input.IsFestival != nil {
+		event.IsFestival = *input.IsFestival
 	}
 
 	if err := service.eventDAO.Save(event); err != nil {
