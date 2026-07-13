@@ -19,6 +19,7 @@ type AdminEventRepository interface {
 	Create(event *domain.Event) error
 	GetByIDForAdmin(id uint) (*domain.Event, error)
 	Save(event *domain.Event) error
+	CancelWithCleanup(id uint) (*domain.Event, error)
 }
 
 type EventReportRepository interface {
@@ -195,22 +196,7 @@ func (service *AdminEventService) CancelEvent(id uint) (*domain.Event, error) {
 		return nil, ErrInvalidEventData
 	}
 
-	event, err := service.eventDAO.GetByIDForAdmin(id)
-	if err != nil {
-		return nil, err
-	}
-
-	if event.Status == domain.EventStatusCancelled {
-		return nil, ErrEventCancelled
-	}
-
-	event.Status = domain.EventStatusCancelled
-
-	if err := service.eventDAO.Save(event); err != nil {
-		return nil, err
-	}
-
-	return event, nil
+	return service.eventDAO.CancelWithCleanup(id)
 }
 
 func (service *AdminEventService) GetEventReport(id uint) (*EventReport, error) {

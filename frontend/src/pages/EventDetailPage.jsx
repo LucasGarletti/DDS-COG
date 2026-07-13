@@ -1,33 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getEventById } from '../services/eventService'
+import { getPublicSchedule } from '../services/festivalService'
+import { getErrorMessage } from '../services/httpClient'
 import { purchaseTicket } from '../services/ticketService'
 import { getEventImage } from '../utils/eventImages'
-
-function formatDate(date) {
-  if (!date) {
-    return 'Fecha a confirmar'
-  }
-
-  return new Intl.DateTimeFormat('es-AR', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(date))
-}
-
-function formatPrice(price) {
-  if (price === undefined || price === null) {
-    return 'Precio a confirmar'
-  }
-
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-  }).format(price)
-}
+import { formatDateTime, formatPrice, formatTime } from '../utils/formatters'
 
 function EventDetailPage() {
   const { id } = useParams()
@@ -38,6 +16,9 @@ function EventDetailPage() {
   const [purchaseMessage, setPurchaseMessage] = useState('')
   const [purchaseError, setPurchaseError] = useState('')
   const [purchasing, setPurchasing] = useState(false)
+  const [schedule, setSchedule] = useState([])
+  const [scheduleError, setScheduleError] = useState('')
+  const [scheduleLoading, setScheduleLoading] = useState(false)
 
   useEffect(() => {
     async function loadEvent() {
@@ -53,6 +34,28 @@ function EventDetailPage() {
 
     loadEvent()
   }, [id])
+
+  useEffect(() => {
+    if (!event?.is_festival) {
+      return
+    }
+
+    async function loadSchedule() {
+      setScheduleError('')
+      setScheduleLoading(true)
+
+      try {
+        const result = await getPublicSchedule(id)
+        setSchedule(result.data || [])
+      } catch (requestError) {
+        setScheduleError(getErrorMessage(requestError, 'No se pudo cargar la grilla'))
+      } finally {
+        setScheduleLoading(false)
+      }
+    }
+
+    loadSchedule()
+  }, [event?.is_festival, id])
 
   async function handlePurchase() {
     setPurchaseMessage('')
@@ -92,8 +95,9 @@ function EventDetailPage() {
           />
 
           <section className="detail-panel">
-            <p className="event-date">{formatDate(event.date)}</p>
+            <p className="event-date">{formatDateTime(event.date)}</p>
             <h1>{event.title}</h1>
+            {event.is_festival && <span className="status-badge">Festival</span>}
             <p className="detail-description">{event.description}</p>
 
             <dl className="detail-list">
@@ -126,6 +130,37 @@ function EventDetailPage() {
             </button>
           </section>
         </article>
+      )}
+
+      {event?.is_festival && (
+        <section className="festival-section">
+          <div className="section-heading">
+            <p>Festival</p>
+            <h2>Grilla oficial</h2>
+          </div>
+
+          {scheduleLoading && <p className="message">Cargando grilla...</p>}
+          {scheduleError && <p className="message error">{scheduleError}</p>}
+
+          <div className="schedule-list">
+            {schedule.map((show) => (
+              <article className="schedule-card" key={show.id}>
+                {show.image_url && <img src={show.image_url} alt={show.artist} />}
+                <div>
+                  <p className="event-date">
+                    {formatTime(show.start_time)} - {formatTime(show.end_time)}
+                  </p>
+                  <h3>{show.artist}</h3>
+                  <p>{show.stage}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          {schedule.length === 0 && !scheduleLoading && (
+            <p className="message">Todavía no hay shows cargados.</p>
+          )}
+        </section>
       )}
     </main>
   )

@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   cancelTicket,
   getMyTickets,
   transferTicket,
 } from '../services/ticketService'
+import { getItinerary } from '../services/itineraryService'
 
 function formatDate(date) {
   if (!date) {
@@ -54,12 +56,14 @@ function MyTicketsPage({ authToken }) {
   const [loading, setLoading] = useState(true)
   const [actionLoadingId, setActionLoadingId] = useState(null)
   const [transferEmails, setTransferEmails] = useState({})
+  const [itineraryItemCounts, setItineraryItemCounts] = useState({})
 
   async function loadTickets() {
     const currentToken = localStorage.getItem('token')
     const currentUserID = getUserIDFromToken(currentToken)
 
     setTickets([])
+    setItineraryItemCounts({})
     setError('')
     setLoading(true)
 
@@ -69,7 +73,13 @@ function MyTicketsPage({ authToken }) {
         return
       }
 
-      setTickets(filterTicketsByUser(result.data || [], currentUserID))
+      const userTickets = filterTicketsByUser(result.data || [], currentUserID)
+      const counts = await loadItineraryItemCounts(userTickets)
+      if (currentToken !== localStorage.getItem('token')) {
+        return
+      }
+      setTickets(userTickets)
+      setItineraryItemCounts(counts)
     } catch {
       setError('No se pudieron cargar tus entradas')
     } finally {
@@ -78,11 +88,16 @@ function MyTicketsPage({ authToken }) {
   }
 
   useEffect(() => {
-    setTickets([])
-    setTransferEmails({})
-    setMessage('')
-    setError('')
-    loadTickets()
+    async function resetAndLoadTickets() {
+      setTickets([])
+      setTransferEmails({})
+      setItineraryItemCounts({})
+      setMessage('')
+      setError('')
+      await loadTickets()
+    }
+
+    resetAndLoadTickets()
   }, [authToken])
 
   async function handleCancel(ticketId) {
@@ -196,6 +211,14 @@ function MyTicketsPage({ authToken }) {
                     </button>
                   </div>
                 </div>
+                {ticket.event?.is_festival && (
+                  <Link
+                    className="secondary-button"
+                    to={`/mis-entradas/${ticket.event_id}/grilla`}
+                  >
+                    {getItineraryButtonText(ticket, itineraryItemCounts)}
+                  </Link>
+                )}
               </div>
             )}
           </li>
@@ -203,6 +226,35 @@ function MyTicketsPage({ authToken }) {
       </ul>
     </main>
   )
+}
+
+async function loadItineraryItemCounts(tickets) {
+  const festivalTickets = tickets.filter(
+    (ticket) => ticket.status === 'active' && ticket.event?.is_festival,
+  )
+
+  if (festivalTickets.length === 0) {
+    return {}
+  }
+
+  const countEntries = await Promise.all(
+    festivalTickets.map(async (ticket) => {
+      try {
+        const result = await getItinerary(ticket.event_id)
+        return [ticket.event_id, result.data?.items?.length || 0]
+      } catch {
+        return [ticket.event_id, 0]
+      }
+    }),
+  )
+
+  return Object.fromEntries(countEntries)
+}
+
+function getItineraryButtonText(ticket, counts) {
+  return counts[ticket.event_id] > 0
+    ? 'Ver / Editar mi grilla'
+    : 'Crear grilla del evento'
 }
 
 export default MyTicketsPage

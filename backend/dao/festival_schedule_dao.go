@@ -18,6 +18,10 @@ func (dao *FestivalScheduleDAO) Create(schedule *domain.FestivalSchedule) error 
 	return dao.db.Create(schedule).Error
 }
 
+func (dao *FestivalScheduleDAO) Save(schedule *domain.FestivalSchedule) error {
+	return dao.db.Save(schedule).Error
+}
+
 func (dao *FestivalScheduleDAO) GetByID(id uint) (*domain.FestivalSchedule, error) {
 	var schedule domain.FestivalSchedule
 

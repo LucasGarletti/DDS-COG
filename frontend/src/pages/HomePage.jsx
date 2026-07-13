@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import EventCard from '../components/EventCard'
 import { getEvents } from '../services/eventService'
-import { getEventImage } from '../utils/eventImages'
 
 function HomePage() {
   const [events, setEvents] = useState([])
@@ -50,22 +50,13 @@ function HomePage() {
 
         <ul className="event-list">
           {events.map((event) => (
-            <li className="event-card" key={event.id}>
-              <img
-                src={getEventImage(event)}
-                alt={event.title}
-                className="event-image"
-              />
-              <div className="event-card-body">
-                <h2>{event.title}</h2>
-                <p className="event-location">{event.location}</p>
-                <Link className="primary-button" to={`/eventos/${event.id}`}>
-                  Ver detalle
-                </Link>
-              </div>
-            </li>
+            <EventCard event={event} key={event.id} />
           ))}
         </ul>
+
+        <Link className="secondary-button" to="/eventos">
+          Ver todos
+        </Link>
       </section>
     </main>
   )

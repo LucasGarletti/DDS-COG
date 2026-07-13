@@ -15,6 +15,7 @@ import (
 
 type festivalScheduleService interface {
 	Create(input services.CreateFestivalScheduleInput) (*domain.FestivalSchedule, error)
+	Update(input services.UpdateFestivalScheduleInput) (*domain.FestivalSchedule, error)
 	List(eventID uint) ([]domain.FestivalSchedule, error)
 	Delete(id uint) error
 }
@@ -75,6 +76,46 @@ func (controller *FestivalScheduleController) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"success": true, "message": "festival schedule created successfully", "data": schedule})
 }
 
+func (controller *FestivalScheduleController) Update(c *gin.Context) {
+	scheduleID, ok := parseUintParam(c, "id", "invalid schedule id")
+	if !ok {
+		return
+	}
+
+	var request createFestivalScheduleRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "invalid request body"})
+		return
+	}
+
+	startTime, err := time.Parse(time.RFC3339, request.StartTime)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "invalid festival schedule"})
+		return
+	}
+
+	endTime, err := time.Parse(time.RFC3339, request.EndTime)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "invalid festival schedule"})
+		return
+	}
+
+	schedule, err := controller.scheduleService.Update(services.UpdateFestivalScheduleInput{
+		ID:        scheduleID,
+		Artist:    request.Artist,
+		Stage:     request.Stage,
+		StartTime: startTime,
+		EndTime:   endTime,
+		ImageURL:  request.ImageURL,
+	})
+	if err != nil {
+		controller.handleScheduleError(c, err, "could not update festival schedule")
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "festival schedule updated successfully", "data": schedule})
+}
+
 func (controller *FestivalScheduleController) List(c *gin.Context) {
 	eventID, ok := parseUintParam(c, "id", "invalid event id")
 	if !ok {
@@ -105,6 +146,15 @@ func (controller *FestivalScheduleController) Delete(c *gin.Context) {
 }
 
 func (controller *FestivalScheduleController) handleScheduleError(c *gin.Context, err error, fallback string) {
+	var dateMismatch services.FestivalScheduleDateMismatchError
+	if errors.As(err, &dateMismatch) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "La fecha del show debe coincidir con la fecha del festival: " + dateMismatch.FestivalDate.Format("02/01/2006"),
+		})
+		return
+	}
+
 	if errors.Is(err, services.ErrInvalidFestivalSchedule) {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "invalid festival schedule"})
 		return

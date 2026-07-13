@@ -9,7 +9,7 @@ type EventService struct {
 }
 
 type EventRepository interface {
-	GetAll() ([]domain.Event, error)
+	GetAll(filters domain.EventFilters) ([]domain.Event, error)
 	GetByID(id uint) (*domain.Event, error)
 }
 
@@ -17,8 +17,8 @@ func NewEventService(eventDAO EventRepository) *EventService {
 	return &EventService{eventDAO: eventDAO}
 }
 
-func (service *EventService) ListEvents() ([]domain.Event, error) {
-	return service.eventDAO.GetAll()
+func (service *EventService) ListEvents(filters domain.EventFilters) ([]domain.Event, error) {
+	return service.eventDAO.GetAll(filters)
 }
 
 func (service *EventService) GetEventByID(id uint) (*domain.Event, error) {

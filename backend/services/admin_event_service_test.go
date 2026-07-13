@@ -15,8 +15,10 @@ type fakeAdminEventRepository struct {
 	createErr    error
 	getErr       error
 	saveErr      error
+	cancelErr    error
 	createdEvent *domain.Event
 	savedEvent   *domain.Event
+	cancelledID  uint
 }
 
 func (repo *fakeAdminEventRepository) Create(event *domain.Event) error {
@@ -34,6 +36,18 @@ func (repo *fakeAdminEventRepository) GetByIDForAdmin(id uint) (*domain.Event, e
 func (repo *fakeAdminEventRepository) Save(event *domain.Event) error {
 	repo.savedEvent = event
 	return repo.saveErr
+}
+
+func (repo *fakeAdminEventRepository) CancelWithCleanup(id uint) (*domain.Event, error) {
+	repo.cancelledID = id
+	if repo.cancelErr != nil {
+		return nil, repo.cancelErr
+	}
+	if repo.event == nil {
+		return nil, gorm.ErrRecordNotFound
+	}
+	repo.event.Status = domain.EventStatusCancelled
+	return repo.event, nil
 }
 
 type fakeEventReportRepository struct {
@@ -283,10 +297,14 @@ func TestAdminCancelEventSuccess(t *testing.T) {
 	if event.AvailableCapacity != 10 {
 		t.Fatalf("expected available capacity unchanged, got %d", event.AvailableCapacity)
 	}
+
+	if repo.cancelledID != 1 {
+		t.Fatalf("expected repository cancel id 1, got %d", repo.cancelledID)
+	}
 }
 
 func TestAdminCancelMissingEventReturnsError(t *testing.T) {
-	service := newAdminEventTestService(&fakeAdminEventRepository{getErr: gorm.ErrRecordNotFound}, &fakeEventReportRepository{})
+	service := newAdminEventTestService(&fakeAdminEventRepository{cancelErr: gorm.ErrRecordNotFound}, &fakeEventReportRepository{})
 
 	_, err := service.CancelEvent(1)
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -294,13 +312,17 @@ func TestAdminCancelMissingEventReturnsError(t *testing.T) {
 	}
 }
 
-func TestAdminCancelAlreadyCancelledReturnsConflict(t *testing.T) {
+func TestAdminCancelAlreadyCancelledIsIdempotent(t *testing.T) {
 	repo := &fakeAdminEventRepository{event: &domain.Event{ID: 1, Status: domain.EventStatusCancelled}}
 	service := newAdminEventTestService(repo, &fakeEventReportRepository{})
 
-	_, err := service.CancelEvent(1)
-	if !errors.Is(err, ErrEventCancelled) {
-		t.Fatalf("expected ErrEventCancelled, got %v", err)
+	event, err := service.CancelEvent(1)
+	if err != nil {
+		t.Fatalf("CancelEvent returned error: %v", err)
+	}
+
+	if event.Status != domain.EventStatusCancelled {
+		t.Fatalf("expected cancelled status, got %s", event.Status)
 	}
 }
 

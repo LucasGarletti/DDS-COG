@@ -85,6 +85,7 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 		adminRoutes.GET("/reportes/eventos", adminReportController.EventReports)
 		adminRoutes.POST("/eventos/:id/grilla", festivalScheduleController.Create)
 		adminRoutes.GET("/eventos/:id/grilla", festivalScheduleController.List)
+		adminRoutes.PATCH("/grilla/:id", festivalScheduleController.Update)
 		adminRoutes.DELETE("/grilla/:id", festivalScheduleController.Delete)
 	}
 

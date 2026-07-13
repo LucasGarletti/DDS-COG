@@ -1,6 +1,5 @@
 import axios from 'axios'
-
-const API_URL = 'http://localhost:8080'
+import { API_URL, getAuth } from './httpClient'
 
 export async function login(email, password) {
   const response = await axios.post(`${API_URL}/auth/login`, {
@@ -9,4 +8,8 @@ export async function login(email, password) {
   })
 
   return response.data
+}
+
+export async function getMe() {
+  return getAuth('/auth/me')
 }

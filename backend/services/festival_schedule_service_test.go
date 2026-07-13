@@ -27,11 +27,17 @@ type fakeFestivalScheduleRepository struct {
 	schedules []domain.FestivalSchedule
 	err       error
 	created   *domain.FestivalSchedule
+	saved     *domain.FestivalSchedule
 	deletedID uint
 }
 
 func (repo *fakeFestivalScheduleRepository) Create(schedule *domain.FestivalSchedule) error {
 	repo.created = schedule
+	return repo.err
+}
+
+func (repo *fakeFestivalScheduleRepository) Save(schedule *domain.FestivalSchedule) error {
+	repo.saved = schedule
 	return repo.err
 }
 
@@ -61,9 +67,27 @@ func validScheduleInput() CreateFestivalScheduleInput {
 	}
 }
 
+func validUpdateScheduleInput() UpdateFestivalScheduleInput {
+	return UpdateFestivalScheduleInput{
+		ID:        3,
+		Artist:    "Artista editado",
+		Stage:     "Escenario",
+		StartTime: time.Date(2026, 12, 10, 20, 0, 0, 0, time.UTC),
+		EndTime:   time.Date(2026, 12, 10, 21, 0, 0, 0, time.UTC),
+	}
+}
+
+func festivalEvent() *domain.Event {
+	return &domain.Event{
+		ID:         1,
+		Date:       time.Date(2026, 12, 10, 16, 0, 0, 0, time.UTC),
+		IsFestival: true,
+	}
+}
+
 func TestFestivalScheduleCreateValid(t *testing.T) {
 	repo := &fakeFestivalScheduleRepository{}
-	service := NewFestivalScheduleService(fakeFestivalEventRepository{event: &domain.Event{ID: 1, IsFestival: true}}, repo)
+	service := NewFestivalScheduleService(fakeFestivalEventRepository{event: festivalEvent()}, repo)
 
 	schedule, err := service.Create(validScheduleInput())
 	if err != nil {
@@ -76,7 +100,7 @@ func TestFestivalScheduleCreateValid(t *testing.T) {
 }
 
 func TestFestivalScheduleCreateInvalidArtist(t *testing.T) {
-	service := NewFestivalScheduleService(fakeFestivalEventRepository{event: &domain.Event{ID: 1, IsFestival: true}}, &fakeFestivalScheduleRepository{})
+	service := NewFestivalScheduleService(fakeFestivalEventRepository{event: festivalEvent()}, &fakeFestivalScheduleRepository{})
 	input := validScheduleInput()
 	input.Artist = " "
 
@@ -87,7 +111,7 @@ func TestFestivalScheduleCreateInvalidArtist(t *testing.T) {
 }
 
 func TestFestivalScheduleCreateEndBeforeStart(t *testing.T) {
-	service := NewFestivalScheduleService(fakeFestivalEventRepository{event: &domain.Event{ID: 1, IsFestival: true}}, &fakeFestivalScheduleRepository{})
+	service := NewFestivalScheduleService(fakeFestivalEventRepository{event: festivalEvent()}, &fakeFestivalScheduleRepository{})
 	input := validScheduleInput()
 	input.EndTime = input.StartTime
 
@@ -107,7 +131,9 @@ func TestFestivalScheduleCreateMissingEventReturnsError(t *testing.T) {
 }
 
 func TestFestivalScheduleCreateNonFestivalReturnsError(t *testing.T) {
-	service := NewFestivalScheduleService(fakeFestivalEventRepository{event: &domain.Event{ID: 1, IsFestival: false}}, &fakeFestivalScheduleRepository{})
+	event := festivalEvent()
+	event.IsFestival = false
+	service := NewFestivalScheduleService(fakeFestivalEventRepository{event: event}, &fakeFestivalScheduleRepository{})
 
 	_, err := service.Create(validScheduleInput())
 	if !errors.Is(err, ErrEventNotFestival) {
@@ -116,7 +142,7 @@ func TestFestivalScheduleCreateNonFestivalReturnsError(t *testing.T) {
 }
 
 func TestFestivalScheduleListReturnsEmptySlice(t *testing.T) {
-	service := NewFestivalScheduleService(fakeFestivalEventRepository{event: &domain.Event{ID: 1, IsFestival: true}}, &fakeFestivalScheduleRepository{})
+	service := NewFestivalScheduleService(fakeFestivalEventRepository{event: festivalEvent()}, &fakeFestivalScheduleRepository{})
 
 	schedules, err := service.List(1)
 	if err != nil {
@@ -138,5 +164,94 @@ func TestFestivalScheduleDeleteSuccess(t *testing.T) {
 
 	if repo.deletedID != 1 {
 		t.Fatalf("expected deleted id 1, got %d", repo.deletedID)
+	}
+}
+
+func TestFestivalScheduleCreatePreviousDayReturnsDateMismatch(t *testing.T) {
+	service := NewFestivalScheduleService(fakeFestivalEventRepository{event: festivalEvent()}, &fakeFestivalScheduleRepository{})
+	input := validScheduleInput()
+	input.StartTime = time.Date(2026, 12, 9, 20, 0, 0, 0, time.UTC)
+	input.EndTime = time.Date(2026, 12, 9, 21, 0, 0, 0, time.UTC)
+
+	_, err := service.Create(input)
+	if !errors.Is(err, ErrFestivalScheduleDateMismatch) {
+		t.Fatalf("expected ErrFestivalScheduleDateMismatch, got %v", err)
+	}
+}
+
+func TestFestivalScheduleCreateNextDayReturnsDateMismatch(t *testing.T) {
+	service := NewFestivalScheduleService(fakeFestivalEventRepository{event: festivalEvent()}, &fakeFestivalScheduleRepository{})
+	input := validScheduleInput()
+	input.StartTime = time.Date(2026, 12, 11, 20, 0, 0, 0, time.UTC)
+	input.EndTime = time.Date(2026, 12, 11, 21, 0, 0, 0, time.UTC)
+
+	_, err := service.Create(input)
+	if !errors.Is(err, ErrFestivalScheduleDateMismatch) {
+		t.Fatalf("expected ErrFestivalScheduleDateMismatch, got %v", err)
+	}
+}
+
+func TestFestivalScheduleCreateEndOnNextDayReturnsDateMismatch(t *testing.T) {
+	service := NewFestivalScheduleService(fakeFestivalEventRepository{event: festivalEvent()}, &fakeFestivalScheduleRepository{})
+	input := validScheduleInput()
+	input.StartTime = time.Date(2026, 12, 10, 23, 30, 0, 0, time.UTC)
+	input.EndTime = time.Date(2026, 12, 11, 0, 30, 0, 0, time.UTC)
+
+	_, err := service.Create(input)
+	if !errors.Is(err, ErrFestivalScheduleDateMismatch) {
+		t.Fatalf("expected ErrFestivalScheduleDateMismatch, got %v", err)
+	}
+}
+
+func TestFestivalScheduleUpdateWrongDayReturnsDateMismatch(t *testing.T) {
+	repo := &fakeFestivalScheduleRepository{schedule: &domain.FestivalSchedule{ID: 3, EventID: 1}}
+	service := NewFestivalScheduleService(fakeFestivalEventRepository{event: festivalEvent()}, repo)
+	input := validUpdateScheduleInput()
+	input.StartTime = time.Date(2026, 12, 11, 20, 0, 0, 0, time.UTC)
+	input.EndTime = time.Date(2026, 12, 11, 21, 0, 0, 0, time.UTC)
+
+	_, err := service.Update(input)
+	if !errors.Is(err, ErrFestivalScheduleDateMismatch) {
+		t.Fatalf("expected ErrFestivalScheduleDateMismatch, got %v", err)
+	}
+}
+
+func TestFestivalScheduleUpdateValid(t *testing.T) {
+	repo := &fakeFestivalScheduleRepository{schedule: &domain.FestivalSchedule{ID: 3, EventID: 1}}
+	service := NewFestivalScheduleService(fakeFestivalEventRepository{event: festivalEvent()}, repo)
+
+	schedule, err := service.Update(validUpdateScheduleInput())
+	if err != nil {
+		t.Fatalf("Update returned error: %v", err)
+	}
+
+	if schedule.Artist != "Artista editado" || repo.saved == nil {
+		t.Fatalf("expected schedule to be saved, got %+v", schedule)
+	}
+}
+
+func TestFestivalScheduleDateValidationUsesEventLocation(t *testing.T) {
+	location := time.FixedZone("ART", -3*60*60)
+	event := &domain.Event{
+		ID:         1,
+		Date:       time.Date(2027, 2, 15, 16, 0, 0, 0, location),
+		IsFestival: true,
+	}
+	service := NewFestivalScheduleService(fakeFestivalEventRepository{event: event}, &fakeFestivalScheduleRepository{})
+	input := CreateFestivalScheduleInput{
+		EventID:   1,
+		Artist:    "Artista",
+		Stage:     "Escenario",
+		StartTime: time.Date(2027, 2, 16, 2, 30, 0, 0, time.UTC),
+		EndTime:   time.Date(2027, 2, 16, 2, 45, 0, 0, time.UTC),
+	}
+
+	schedule, err := service.Create(input)
+	if err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+
+	if schedule == nil {
+		t.Fatal("expected schedule")
 	}
 }

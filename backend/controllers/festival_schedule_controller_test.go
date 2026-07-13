@@ -24,6 +24,10 @@ func (service fakeFestivalScheduleService) Create(input services.CreateFestivalS
 	return service.schedule, service.err
 }
 
+func (service fakeFestivalScheduleService) Update(input services.UpdateFestivalScheduleInput) (*domain.FestivalSchedule, error) {
+	return service.schedule, service.err
+}
+
 func (service fakeFestivalScheduleService) List(eventID uint) ([]domain.FestivalSchedule, error) {
 	return service.schedules, service.err
 }
@@ -88,6 +92,33 @@ func TestFestivalScheduleCreateNonFestivalReturnsBadRequest(t *testing.T) {
 	}
 }
 
+func TestFestivalScheduleCreateDateMismatchReturnsBadRequest(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	controller := NewFestivalScheduleController(fakeFestivalScheduleService{
+		err: services.FestivalScheduleDateMismatchError{
+			FestivalDate: time.Date(2027, 2, 15, 16, 0, 0, 0, time.UTC),
+		},
+	})
+	router := gin.New()
+	router.POST("/admin/eventos/:id/grilla", controller.Create)
+
+	body := `{"artist":"Banda","stage":"Norte","start_time":"2027-02-14T20:00:00Z","end_time":"2027-02-14T21:00:00Z"}`
+	request := httptest.NewRequest(http.MethodPost, "/admin/eventos/1/grilla", strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", response.Code)
+	}
+
+	if !strings.Contains(response.Body.String(), "15/02/2027") {
+		t.Fatalf("expected festival date in response, got %s", response.Body.String())
+	}
+}
+
 func TestFestivalScheduleListReturnsOK(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -119,6 +150,52 @@ func TestFestivalScheduleDeleteInternalError(t *testing.T) {
 
 	if response.Code != http.StatusInternalServerError {
 		t.Fatalf("expected status 500, got %d", response.Code)
+	}
+}
+
+func TestFestivalScheduleUpdateReturnsOK(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	controller := NewFestivalScheduleController(fakeFestivalScheduleService{schedule: &domain.FestivalSchedule{ID: 1}})
+	router := gin.New()
+	router.PATCH("/admin/grilla/:id", controller.Update)
+
+	body := `{"artist":"Banda","stage":"Norte","start_time":"2026-12-10T20:00:00Z","end_time":"2026-12-10T21:00:00Z"}`
+	request := httptest.NewRequest(http.MethodPatch, "/admin/grilla/1", strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", response.Code)
+	}
+}
+
+func TestFestivalScheduleUpdateDateMismatchReturnsBadRequest(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	controller := NewFestivalScheduleController(fakeFestivalScheduleService{
+		err: services.FestivalScheduleDateMismatchError{
+			FestivalDate: time.Date(2027, 2, 15, 16, 0, 0, 0, time.UTC),
+		},
+	})
+	router := gin.New()
+	router.PATCH("/admin/grilla/:id", controller.Update)
+
+	body := `{"artist":"Banda","stage":"Norte","start_time":"2027-02-16T20:00:00Z","end_time":"2027-02-16T21:00:00Z"}`
+	request := httptest.NewRequest(http.MethodPatch, "/admin/grilla/1", strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", response.Code)
+	}
+
+	if !strings.Contains(response.Body.String(), "15/02/2027") {
+		t.Fatalf("expected festival date in response, got %s", response.Body.String())
 	}
 }
 
