@@ -25,6 +25,12 @@ func main() {
 		log.Fatal("Error normalizing event statuses: ", err)
 	}
 
+	if os.Getenv("RUN_SEED") == "true" {
+		if err := config.SeedDatabase(config.DB); err != nil {
+			log.Fatal("Error seeding database: ", err)
+		}
+	}
+
 	router := routes.SetupRouter(config.DB)
 
 	port := os.Getenv("PORT")

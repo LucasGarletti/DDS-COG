@@ -213,7 +213,39 @@ Base de datos MySQL
 Host: localhost
 Puerto: 3306
 Base: dds_cog
-13. Comandos útiles de Docker
+13. Datos iniciales de prueba
+
+Al levantar el sistema con Docker, el backend ejecuta un seed inicial porque
+docker-compose.yml define RUN_SEED=true para el servicio backend.
+
+Credenciales de demostracion:
+
+Administrador:
+Email: admin@tickgo.com
+Password: Admin123!
+
+Cliente:
+Email: client@tickgo.com
+Password: Client123!
+
+Las contrasenas se guardan hasheadas con la misma funcion usada por el registro
+normal. El seed es idempotente: busca usuarios por email, eventos por titulo y
+artistas por event_id + artist + start_time, por lo que puede ejecutarse varias
+veces sin duplicar registros.
+
+Eventos cargados:
+
+Festival Cosquín Rock
+Los Pumas en el Estadio Mario Alberto Kempes
+Las Pastillas del Abuelo
+
+Grilla inicial de Cosquín Rock:
+
+Airbag
+Dillom
+Guasones
+
+14. Comandos útiles de Docker
 
 Levantar el sistema:
 
@@ -239,7 +271,7 @@ Reconstruir imágenes:
 
 docker compose build --no-cache
 docker compose up
-14. Persistencia de datos
+15. Persistencia de datos
 
 El sistema utiliza un volumen Docker para almacenar la base de datos.
 
@@ -253,7 +285,7 @@ Elimina completamente la base de datos creada dentro de Docker.
 
 La base MySQL utilizada por Docker es independiente de cualquier instalación local de MySQL.
 
-15. Ejecución sin Docker
+16. Ejecución sin Docker
 Backend
 cd backend
 go run main.go
@@ -261,7 +293,7 @@ Frontend
 cd frontend
 npm install
 npm run dev
-16. API y autenticación
+17. API y autenticación
 
 La autenticación se realiza mediante JWT.
 
@@ -272,7 +304,7 @@ admin
 
 Las rutas administrativas requieren autenticación y autorización mediante middleware de roles.
 
-17. Estado actual del proyecto
+18. Estado actual del proyecto
 
 Funcionalidades implementadas:
 
@@ -287,7 +319,7 @@ Gestión de festivales.
 Bonus Track de itinerarios personales.
 Persistencia en MySQL.
 Dockerización completa mediante Docker Compose.
-18. Estructura general del proyecto
+19. Estructura general del proyecto
 DDS-COG
 │
 ├── backend

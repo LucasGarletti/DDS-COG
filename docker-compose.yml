@@ -32,6 +32,7 @@ services:
       DB_PASSWORD: tickgo123
       JWT_SECRET: tickgo-local-docker-secret
       JWT_EXPIRES: 24
+      RUN_SEED: "true"
     ports:
       - "8080:8080"
 

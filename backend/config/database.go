@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 	"gorm.io/driver/mysql"
@@ -28,10 +29,18 @@ func ConnectDatabase() {
 		os.Getenv("DB_NAME"),
 	)
 
-	database, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
-	if err != nil {
-		log.Fatal("Error connecting to database: ", err)
+	var database *gorm.DB
+	var err error
+	for attempt := 1; attempt <= 10; attempt++ {
+		database, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+		if err == nil {
+			DB = database
+			return
+		}
+
+		log.Printf("Database connection attempt %d failed: %v", attempt, err)
+		time.Sleep(3 * time.Second)
 	}
 
-	DB = database
+	log.Fatal("Error connecting to database: ", err)
 }

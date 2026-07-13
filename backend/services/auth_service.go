@@ -42,6 +42,15 @@ func NewAuthService(userDAO UserRepository) *AuthService {
 	return &AuthService{userDAO: userDAO}
 }
 
+func HashPassword(password string) (string, error) {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+
+	return string(hashedPassword), nil
+}
+
 func (service *AuthService) Register(input RegisterInput) (*domain.User, error) {
 	existingUser, err := service.userDAO.FindByEmail(input.Email)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -51,7 +60,7 @@ func (service *AuthService) Register(input RegisterInput) (*domain.User, error) 
 		return nil, ErrEmailAlreadyExists
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
+	hashedPassword, err := HashPassword(input.Password)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +68,7 @@ func (service *AuthService) Register(input RegisterInput) (*domain.User, error) 
 	user := &domain.User{
 		Name:     input.Name,
 		Email:    input.Email,
-		Password: string(hashedPassword),
+		Password: hashedPassword,
 		Role:     domain.UserRoleClient,
 	}
 
