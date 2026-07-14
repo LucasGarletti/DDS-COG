@@ -26,6 +26,52 @@ func TestPingReturnsOK(t *testing.T) {
 	}
 }
 
+func TestCorsMiddlewareAllowsConfiguredOriginAndOptions(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	router := gin.New()
+	router.Use(corsMiddleware())
+	router.GET("/resource", func(c *gin.Context) { c.Status(http.StatusOK) })
+	router.OPTIONS("/resource", func(c *gin.Context) { c.Status(http.StatusOK) })
+
+	request := httptest.NewRequest(http.MethodOptions, "/resource", nil)
+	request.Header.Set("Origin", "http://localhost:5173")
+	response := httptest.NewRecorder()
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusNoContent {
+		t.Fatalf("expected status 204, got %d", response.Code)
+	}
+	if response.Header().Get("Access-Control-Allow-Origin") != "http://localhost:5173" {
+		t.Fatalf("expected allowed origin header, got %q", response.Header().Get("Access-Control-Allow-Origin"))
+	}
+	if response.Header().Get("Access-Control-Allow-Methods") == "" {
+		t.Fatal("expected allowed methods header")
+	}
+}
+
+func TestCorsMiddlewareDoesNotAllowUnknownOrigin(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	router := gin.New()
+	router.Use(corsMiddleware())
+	router.GET("/resource", func(c *gin.Context) { c.Status(http.StatusOK) })
+
+	request := httptest.NewRequest(http.MethodGet, "/resource", nil)
+	request.Header.Set("Origin", "https://example.com")
+	response := httptest.NewRecorder()
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", response.Code)
+	}
+	if response.Header().Get("Access-Control-Allow-Origin") != "" {
+		t.Fatalf("expected no allow origin header, got %q", response.Header().Get("Access-Control-Allow-Origin"))
+	}
+}
+
 func TestProtectedEndpointWithoutTokenReturnsUnauthorized(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

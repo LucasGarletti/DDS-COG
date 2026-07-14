@@ -127,6 +127,25 @@ func TestAdminCreateEventInvalidJSONReturnsBadRequest(t *testing.T) {
 	}
 }
 
+func TestAdminCreateEventInvalidDateReturnsBadRequest(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	controller := NewAdminEventController(fakeAdminEventService{})
+	router := gin.New()
+	router.POST("/admin/eventos", controller.Create)
+
+	body := `{"title":"Evento","description":"Descripcion","date":"invalid","location":"Cordoba","capacity":1000,"price":25000}`
+	request := httptest.NewRequest(http.MethodPost, "/admin/eventos", strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", response.Code)
+	}
+}
+
 func TestAdminCreateEventInvalidValidationReturnsBadRequest(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -160,6 +179,42 @@ func TestAdminUpdateMissingEventReturnsNotFound(t *testing.T) {
 
 	if response.Code != http.StatusNotFound {
 		t.Fatalf("expected status 404, got %d", response.Code)
+	}
+}
+
+func TestAdminUpdateInvalidIDReturnsBadRequest(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	controller := NewAdminEventController(fakeAdminEventService{})
+	router := gin.New()
+	router.PATCH("/admin/eventos/:id", controller.Update)
+
+	request := httptest.NewRequest(http.MethodPatch, "/admin/eventos/invalid", strings.NewReader(`{"title":"Nuevo"}`))
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", response.Code)
+	}
+}
+
+func TestAdminUpdateInvalidJSONReturnsBadRequest(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	controller := NewAdminEventController(fakeAdminEventService{})
+	router := gin.New()
+	router.PATCH("/admin/eventos/:id", controller.Update)
+
+	request := httptest.NewRequest(http.MethodPatch, "/admin/eventos/1", strings.NewReader("{"))
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", response.Code)
 	}
 }
 
@@ -261,6 +316,40 @@ func TestAdminCancelEventReturnsOK(t *testing.T) {
 	}
 }
 
+func TestAdminCancelMissingEventReturnsNotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	controller := NewAdminEventController(fakeAdminEventService{err: gorm.ErrRecordNotFound})
+	router := gin.New()
+	router.DELETE("/admin/eventos/:id", controller.Cancel)
+
+	request := httptest.NewRequest(http.MethodDelete, "/admin/eventos/1", nil)
+	response := httptest.NewRecorder()
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusNotFound {
+		t.Fatalf("expected status 404, got %d", response.Code)
+	}
+}
+
+func TestAdminCancelInternalErrorReturnsInternalServerError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	controller := NewAdminEventController(fakeAdminEventService{err: errors.New("internal")})
+	router := gin.New()
+	router.DELETE("/admin/eventos/:id", controller.Cancel)
+
+	request := httptest.NewRequest(http.MethodDelete, "/admin/eventos/1", nil)
+	response := httptest.NewRecorder()
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("expected status 500, got %d", response.Code)
+	}
+}
+
 func TestAdminReportEventReturnsOK(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -277,6 +366,40 @@ func TestAdminReportEventReturnsOK(t *testing.T) {
 
 	if response.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d", response.Code)
+	}
+}
+
+func TestAdminReportMissingEventReturnsNotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	controller := NewAdminEventController(fakeAdminEventService{err: gorm.ErrRecordNotFound})
+	router := gin.New()
+	router.GET("/admin/eventos/:id/reporte", controller.Report)
+
+	request := httptest.NewRequest(http.MethodGet, "/admin/eventos/1/reporte", nil)
+	response := httptest.NewRecorder()
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusNotFound {
+		t.Fatalf("expected status 404, got %d", response.Code)
+	}
+}
+
+func TestAdminReportInvalidIDReturnsBadRequest(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	controller := NewAdminEventController(fakeAdminEventService{})
+	router := gin.New()
+	router.GET("/admin/eventos/:id/reporte", controller.Report)
+
+	request := httptest.NewRequest(http.MethodGet, "/admin/eventos/invalid/reporte", nil)
+	response := httptest.NewRecorder()
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", response.Code)
 	}
 }
 

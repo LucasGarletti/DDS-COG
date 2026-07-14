@@ -99,3 +99,40 @@ func TestValidateJWTRejectsEmptyRole(t *testing.T) {
 		t.Fatal("expected empty role error")
 	}
 }
+
+func TestValidateJWTRejectsMissingSecret(t *testing.T) {
+	t.Setenv("JWT_SECRET", "")
+
+	if _, err := ValidateJWT("token"); err == nil {
+		t.Fatal("expected missing secret error")
+	}
+}
+
+func TestValidateJWTRejectsEmptyToken(t *testing.T) {
+	t.Setenv("JWT_SECRET", "test-secret")
+
+	if _, err := ValidateJWT(" "); err == nil {
+		t.Fatal("expected empty token error")
+	}
+}
+
+func TestIsValidUserRole(t *testing.T) {
+	tests := []struct {
+		name  string
+		role  string
+		valid bool
+	}{
+		{name: "client", role: domain.UserRoleClient, valid: true},
+		{name: "admin", role: domain.UserRoleAdmin, valid: true},
+		{name: "empty", role: "", valid: false},
+		{name: "unknown", role: "superadmin", valid: false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if IsValidUserRole(test.role) != test.valid {
+				t.Fatalf("expected role %q valid=%t", test.role, test.valid)
+			}
+		})
+	}
+}

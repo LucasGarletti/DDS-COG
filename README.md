@@ -166,7 +166,18 @@ Funciones auxiliares.
 
 8. Testing
 
-Cobertura actual: 47.4%
+Se implementaron pruebas unitarias y de integración para las principales capas del backend.
+
+Cobertura obtenida:
+
+- Controllers: 80.5%
+- Services: 80.0%
+- DAO: 84.3%
+- Middlewares: 92.9%
+- Routes: 100.0%
+- Utils: 87.1%
+
+Cobertura global: 80.6%
 
 Documentación de testing:
 
@@ -174,7 +185,10 @@ https://docs.google.com/document/d/1XUsHm1oQKEg67baPkc7hhEwIPgR31MwD2DTuUWmXFmE/
 
 Para ejecutar los tests del backend:
 
+```bash
 go test ./...
+go test ./... -coverprofile="coverage.out"
+go tool cover -func="coverage.out"
 9. Diagramas y documentación
 
 Documentación de arquitectura y base de datos:
@@ -213,10 +227,12 @@ Frontend
 http://localhost:5173
 Backend
 http://localhost:8080
+
 Base de datos MySQL
 Host: localhost
-Puerto: 3306
+Puerto: 3307
 Base: dds_cog
+
 13. Datos iniciales de prueba
 
 Al levantar el sistema con Docker, el backend ejecuta un seed inicial porque

@@ -30,6 +30,7 @@ func (repo fakeUserRepository) Create(user *domain.User) error {
 type fakeRegisterUserRepository struct {
 	existingUser *domain.User
 	findErr      error
+	createErr    error
 	createdUser  *domain.User
 }
 
@@ -42,6 +43,9 @@ func (repo *fakeRegisterUserRepository) FindByEmail(email string) (*domain.User,
 }
 
 func (repo *fakeRegisterUserRepository) Create(user *domain.User) error {
+	if repo.createErr != nil {
+		return repo.createErr
+	}
 	repo.createdUser = user
 	return nil
 }
@@ -200,5 +204,73 @@ func TestRegisterWithRepeatedEmailReturnsError(t *testing.T) {
 	})
 	if !errors.Is(err, ErrEmailAlreadyExists) {
 		t.Fatalf("expected ErrEmailAlreadyExists, got %v", err)
+	}
+}
+
+func TestRegisterWithFindErrorReturnsError(t *testing.T) {
+	findErr := errors.New("find error")
+	service := NewAuthService(&fakeRegisterUserRepository{findErr: findErr})
+
+	_, err := service.Register(RegisterInput{
+		Name:     "Test User",
+		Email:    "test@mail.com",
+		Password: "password",
+	})
+	if !errors.Is(err, findErr) {
+		t.Fatalf("expected find error, got %v", err)
+	}
+}
+
+func TestRegisterWithCreateErrorReturnsError(t *testing.T) {
+	createErr := errors.New("create error")
+	service := NewAuthService(&fakeRegisterUserRepository{
+		findErr:   gorm.ErrRecordNotFound,
+		createErr: createErr,
+	})
+
+	_, err := service.Register(RegisterInput{
+		Name:     "Test User",
+		Email:    "test@mail.com",
+		Password: "password",
+	})
+	if !errors.Is(err, createErr) {
+		t.Fatalf("expected create error, got %v", err)
+	}
+}
+
+func TestLoginWithRepositoryErrorReturnsError(t *testing.T) {
+	repoErr := errors.New("repo error")
+	service := NewAuthService(fakeUserRepository{err: repoErr})
+
+	_, err := service.Login(LoginInput{
+		Email:    "test@mail.com",
+		Password: "password",
+	})
+	if !errors.Is(err, repoErr) {
+		t.Fatalf("expected repo error, got %v", err)
+	}
+}
+
+func TestLoginWithTokenGenerationErrorReturnsError(t *testing.T) {
+	t.Setenv("JWT_SECRET", "")
+	t.Setenv("JWT_EXPIRES", "1")
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("correct-password"), bcrypt.DefaultCost)
+	if err != nil {
+		t.Fatalf("could not hash password: %v", err)
+	}
+
+	service := NewAuthService(fakeUserRepository{
+		user: &domain.User{
+			ID:       1,
+			Name:     "Test User",
+			Email:    "test@mail.com",
+			Password: string(hashedPassword),
+			Role:     domain.UserRoleClient,
+		},
+	})
+
+	if _, err := service.Login(LoginInput{Email: "test@mail.com", Password: "correct-password"}); err == nil {
+		t.Fatal("expected token generation error")
 	}
 }
