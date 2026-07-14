@@ -54,16 +54,20 @@ Gin
 GORM
 JWT
 MySQL
+
 Frontend
 React
 Vite
+
 Testing
 Go Testing
 httptest
+
 Contenedores
 Docker
 Docker Compose
 Control de versiones
+
 Git
 GitHub
 4. Arquitectura del sistema
@@ -319,6 +323,7 @@ Gestión de festivales.
 Bonus Track de itinerarios personales.
 Persistencia en MySQL.
 Dockerización completa mediante Docker Compose.
+
 19. Estructura general del proyecto
 DDS-COG
 │
